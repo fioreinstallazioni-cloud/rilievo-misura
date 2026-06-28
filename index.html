@@ -31,8 +31,10 @@
   .g3{grid-template-columns:1fr 1fr 1fr}
   label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:3px}
   label .req{color:var(--danger)}
-  input,select,textarea{width:100%;font-size:16px;padding:11px 12px;border:1px solid var(--line);
+  input,select,textarea{width:100%;min-width:0;font-size:16px;padding:11px 12px;border:1px solid var(--line);
     border-radius:10px;background:#fff;color:var(--ink);font-family:inherit}
+  .grid>div{min-width:0}
+  input[type=date]{-webkit-appearance:none;appearance:none;text-align:left;min-height:46px}
   input:focus,select:focus,textarea:focus{outline:none;border-color:var(--df-blue);
     box-shadow:0 0 0 3px rgba(26,79,156,.15)}
   textarea{resize:vertical;min-height:54px}
