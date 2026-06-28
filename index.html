@@ -757,11 +757,13 @@ document.getElementById('dbxUnlink').onclick=()=>{if(confirm('Scollegare Dropbox
 document.getElementById('dbxAuthBtn').onclick=async()=>{
   const key=document.getElementById('dbxKey').value.trim();
   if(!key){alert('Inserisci l\'App key');return;}
+  const w=window.open('about:blank','_blank'); // apri SUBITO (Safari blocca i popup dopo un await)
   const p=await pkce();setDbx(Object.assign(getDbx(),{key:key,verifier:p.v}));
   const url='https://www.dropbox.com/oauth2/authorize?client_id='+encodeURIComponent(key)+
     '&response_type=code&token_access_type=offline&code_challenge='+p.c+'&code_challenge_method=S256'+
     '&scope='+encodeURIComponent('files.content.write files.content.read');
-  window.open(url,'_blank');document.getElementById('dbxStep2').style.display='block';};
+  if(w){w.location.href=url;}else{window.location.href=url;}
+  document.getElementById('dbxStep2').style.display='block';};
 document.getElementById('dbxConfirm').onclick=async()=>{
   const code=document.getElementById('dbxCode').value.trim();if(!code){alert('Incolla il codice');return;}
   try{await dbxExchangeCode(code);toast('Dropbox collegato ✓',true);openCfg();}
