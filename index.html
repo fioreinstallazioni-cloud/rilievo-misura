@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1a4f9c">
+<title>Rilievo Misura — DF Fiore Installazioni</title>
+<style>
+  :root{
+    --df-blue:#1a4f9c; --df-blue-dark:#143d78; --df-light:#eef3fb;
+    --bg:#f4f6fa; --card:#ffffff; --line:#d4dbe6; --ink:#1d2733; --muted:#6b7785;
+    --ok:#1e9e5a; --warn:#e08a00; --danger:#d23b3b; --radius:14px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    background:var(--bg);color:var(--ink);font-size:16px;line-height:1.4;padding-bottom:90px}
+  header{position:sticky;top:0;z-index:20;background:var(--df-blue);color:#fff;
+    padding:10px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+  .logo{font-weight:800;letter-spacing:1px;background:#fff;color:var(--df-blue);
+    padding:4px 8px;border-radius:6px;font-size:18px;flex:0 0 auto}
+  .htitle{font-size:17px;font-weight:700;line-height:1.1}
+  .htitle small{display:block;font-weight:400;font-size:12px;opacity:.85}
+  .wrap{max-width:820px;margin:0 auto;padding:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px;margin-bottom:14px;box-shadow:0 1px 3px rgba(20,40,80,.05)}
+  .card h2{margin:0 0 10px;font-size:14px;text-transform:uppercase;letter-spacing:.5px;
+    color:var(--df-blue);display:flex;align-items:center;gap:8px}
+  .grid{display:grid;gap:10px}
+  .g2{grid-template-columns:1fr 1fr}
+  .g3{grid-template-columns:1fr 1fr 1fr}
+  label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:3px}
+  label .req{color:var(--danger)}
+  input,select,textarea{width:100%;font-size:16px;padding:11px 12px;border:1px solid var(--line);
+    border-radius:10px;background:#fff;color:var(--ink);font-family:inherit}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--df-blue);
+    box-shadow:0 0 0 3px rgba(26,79,156,.15)}
+  textarea{resize:vertical;min-height:54px}
+  .missing{border-color:var(--danger)!important;background:#fff6f6}
+  .meas input{text-align:center;font-weight:700;font-size:18px}
+  .item{position:relative;border:1px solid var(--line);border-left:5px solid var(--df-blue);
+    border-radius:var(--radius);background:#fff;padding:14px;margin-bottom:14px}
+  .item .ihead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .item .badge{background:var(--df-blue);color:#fff;font-weight:700;border-radius:8px;
+    padding:4px 10px;font-size:14px}
+  .iconbtn{border:none;background:var(--df-light);color:var(--df-blue);border-radius:8px;
+    padding:8px 10px;font-size:14px;font-weight:600;cursor:pointer}
+  .iconbtn.del{background:#fdecec;color:var(--danger)}
+  .sub{border:1px solid var(--line);border-radius:10px;background:#fafbfd;padding:12px;margin-top:10px}
+  .sub h3{margin:0 0 8px;font-size:13px;color:var(--df-blue)}
+  /* media (foto + disegni) */
+  .medialabel{font-size:12px;font-weight:600;color:var(--muted);margin:12px 0 4px}
+  .thumbs{display:flex;flex-wrap:wrap;gap:8px}
+  .thumb{position:relative;width:84px;height:84px;border-radius:10px;overflow:hidden;
+    border:1px solid var(--line);background:#fff;cursor:pointer;flex:0 0 auto}
+  .thumb img{width:100%;height:100%;object-fit:cover}
+  .thumb .x{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.55);color:#fff;border:none;
+    border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;z-index:2}
+  .thumb.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;
+    border:1px dashed var(--df-blue);background:var(--df-light);color:var(--df-blue);font-size:11px;text-align:center}
+  .thumb.empty .big{font-size:24px}
+  .addbtn{width:100%;padding:14px;border:2px dashed var(--df-blue);background:var(--df-light);
+    color:var(--df-blue);font-size:16px;font-weight:700;border-radius:var(--radius);cursor:pointer;margin-bottom:14px}
+  .bottombar{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);
+    padding:10px;display:flex;gap:8px;z-index:30;box-shadow:0 -2px 10px rgba(0,0,0,.06)}
+  .bottombar .wrapb{max-width:820px;margin:0 auto;display:flex;gap:8px;width:100%}
+  .btn{flex:1;padding:13px 8px;border:none;border-radius:12px;font-size:14px;font-weight:700;
+    cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1}
+  .btn .em{font-size:18px}
+  .btn-pdf{background:var(--df-blue);color:#fff}
+  .btn-save{background:var(--df-light);color:var(--df-blue)}
+  .btn-data{background:#eaf7ef;color:var(--ok)}
+  .btn-cloud{background:#e7f0fd;color:var(--df-blue)}
+  .btn-new{background:#fff;color:var(--muted);border:1px solid var(--line)}
+  /* settings modal */
+  .cfgmodal{position:fixed;inset:0;z-index:115;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:16px}
+  .cfgmodal.open{display:flex}
+  .cfgbox{background:#fff;border-radius:14px;max-width:520px;width:100%;max-height:88vh;overflow:auto;padding:18px}
+  .cfgbox h3{margin:0 0 4px;color:var(--df-blue)}
+  .cfgbox .status{font-size:13px;font-weight:700;padding:8px 10px;border-radius:8px;margin:10px 0}
+  .cfgbox .status.on{background:#eaf7ef;color:var(--ok)}
+  .cfgbox .status.off{background:#fdecec;color:var(--danger)}
+  .cfgbox ol{font-size:13px;color:var(--ink);padding-left:18px;margin:8px 0}
+  .cfgbox ol li{margin-bottom:6px}
+  .cfgbox a{color:var(--df-blue);font-weight:600}
+  .cfgbox .fld{margin-top:8px}
+  .cfgbox button.act{width:100%;padding:13px;border:none;border-radius:10px;background:var(--df-blue);color:#fff;font-weight:700;font-size:15px;cursor:pointer;margin-top:10px}
+  .cfgbox button.sec{background:#fff;border:1px solid var(--line);color:var(--ink)}
+  .cfgbox button.danger{background:#fdecec;color:var(--danger);border:none}
+  .cfgbox .small{font-size:11px;color:var(--muted);margin-top:6px}
+  .savestate{position:fixed;top:56px;right:10px;background:var(--ok);color:#fff;font-size:12px;
+    padding:5px 10px;border-radius:20px;opacity:0;transition:opacity .3s;z-index:60}
+  .savestate.show{opacity:1}
+  .savestate.err{background:var(--danger)}
+  .summary{font-size:13px;color:var(--muted);text-align:center;margin:-4px 0 14px}
+  .summary b{color:var(--ink)}
+  .pathline{margin-top:10px;font-size:13px;color:var(--df-blue);background:var(--df-light);
+    border-radius:8px;padding:8px 10px;word-break:break-all}
+  .pathline b{color:var(--ink)}
+  .minibtn{font-size:13px;padding:9px 12px;border:1px solid var(--df-blue);color:var(--df-blue);
+    background:#fff;border-radius:9px;font-weight:600;cursor:pointer}
+  .sugg{position:relative}
+  .sugglist{position:absolute;z-index:25;left:0;right:0;background:#fff;border:1px solid var(--line);
+    border-top:none;border-radius:0 0 10px 10px;max-height:220px;overflow:auto;box-shadow:0 6px 16px rgba(0,0,0,.12)}
+  .sugglist div{padding:10px 12px;font-size:14px;border-bottom:1px solid #f0f2f6;cursor:pointer}
+  .sugglist div:active{background:var(--df-light)}
+  .hint{font-size:11px;color:var(--muted);margin-top:3px}
+  /* EDITOR fullscreen */
+  .editor{position:fixed;inset:0;z-index:100;background:#202830;display:none;flex-direction:column}
+  .editor.open{display:flex}
+  .ed-top{display:flex;align-items:center;gap:8px;padding:10px;background:#1a222b;color:#fff;flex-wrap:wrap}
+  .ed-top .title{font-weight:700;font-size:14px;margin-right:auto}
+  .ed-canvaswrap{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#39424d}
+  #edCanvas{background:#fff;touch-action:none;max-width:100%;max-height:100%}
+  .ed-bottom{display:flex;gap:6px;padding:10px;background:#1a222b;flex-wrap:wrap;align-items:center}
+  .swatch{width:30px;height:30px;border-radius:50%;border:3px solid #fff;cursor:pointer;opacity:.5}
+  .swatch.sel{opacity:1;box-shadow:0 0 0 2px #1a222b,0 0 0 4px #fff}
+  .ed-btn{background:#2c3845;color:#fff;border:none;border-radius:9px;padding:10px 12px;font-size:14px;font-weight:600;cursor:pointer}
+  .ed-btn.save{background:var(--ok)}
+  .ed-btn.cancel{background:#46535f}
+  .ed-btn.tpl{background:var(--df-blue)}
+  .ed-width{display:flex;gap:4px;align-items:center;color:#fff;font-size:12px}
+  /* template picker modal */
+  .tplmodal{position:fixed;inset:0;z-index:110;background:rgba(0,0,0,.55);display:none;
+    align-items:center;justify-content:center;padding:16px}
+  .tplmodal.open{display:flex}
+  .tplbox{background:#fff;border-radius:14px;max-width:560px;width:100%;max-height:80vh;overflow:auto;padding:16px}
+  .tplbox h3{margin:0 0 10px;color:var(--df-blue)}
+  .tplgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  .tplgrid .tplcell{border:1px solid var(--line);border-radius:10px;padding:6px;text-align:center;cursor:pointer}
+  .tplgrid .tplcell canvas{width:100%;height:80px}
+  .tplgrid .tplcell span{font-size:11px;color:var(--muted);display:block;margin-top:4px}
+  /* duplicato da confermare */
+  .item.toconfirm{border-left-color:var(--warn);background:#fffaf0}
+  .confirmbar{display:flex;align-items:center;gap:10px;background:#fff3da;border:1px solid #f0d28a;
+    border-radius:10px;padding:10px;margin-bottom:10px;font-size:13px;color:#8a5b00}
+  .confirmbar button{margin-left:auto;background:var(--warn);color:#fff;border:none;border-radius:8px;
+    padding:9px 14px;font-weight:700;cursor:pointer;font-size:13px}
+  /* photo source sheet */
+  .psheet{position:fixed;inset:0;z-index:120;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center}
+  .psheet-box{background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:480px;padding:14px;display:flex;flex-direction:column;gap:10px}
+  .psheet-box button{padding:15px;border:1px solid var(--line);border-radius:12px;background:#fff;font-size:16px;font-weight:600;color:var(--df-blue);cursor:pointer}
+  .psheet-box button.c{color:var(--muted);font-weight:500}
+  @media (max-width:520px){ .g3{grid-template-columns:1fr 1fr} .tplgrid{grid-template-columns:1fr 1fr} }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">DF</div>
+  <div class="htitle">Rilievo Misura <small>Fiore Installazioni s.r.l.s.</small></div>
+  <button id="cfgBtn" style="margin-left:auto;background:rgba(255,255,255,.18);border:none;color:#fff;font-size:20px;border-radius:8px;padding:6px 10px;cursor:pointer">⚙️</button>
+</header>
+<div class="savestate" id="savestate">salvato ✓</div>
+
+<div class="wrap">
+
+  <!-- CLIENTE -->
+  <div class="card">
+    <h2>👤 Cliente</h2>
+    <div class="grid g2">
+      <div><label>Cliente / Cantiere <span class="req">*</span></label><input id="c_cliente" placeholder="Nome cliente"></div>
+      <div><label>Telefono <span class="req">*</span></label><input id="c_tel" type="tel" placeholder="Cellulare"></div>
+    </div>
+    <div class="grid" style="margin-top:10px">
+      <div class="sugg">
+        <label>Indirizzo <span class="req">*</span></label>
+        <div style="display:flex;gap:8px">
+          <input id="c_via" placeholder="Inizia a scrivere la via…" autocomplete="off" style="flex:1">
+          <button class="minibtn" id="gpsBtn" title="Usa posizione attuale">📍 GPS</button>
+        </div>
+        <div class="sugglist" id="viaSugg" style="display:none"></div>
+        <div class="hint" id="gpsHint"></div>
+      </div>
+    </div>
+    <div class="grid" style="margin-top:10px">
+      <div><label>Note indirizzo / contatto</label>
+        <textarea id="c_vianote" placeholder="Es. citofono 20 · assenza ascensore · citofono non presente, chiamare il cliente all'arrivo"></textarea></div>
+    </div>
+    <div class="grid g2" style="margin-top:10px">
+      <div><label>Data rilievo <span class="req">*</span></label><input id="c_data" type="date"></div>
+      <div><label>Rilevatore <span class="req">*</span></label><input id="c_rilevatore" placeholder="Chi rileva"></div>
+    </div>
+  </div>
+
+  <!-- DESTINAZIONE -->
+  <div class="card">
+    <h2>📁 Destinazione del rilievo</h2>
+    <div class="grid g2">
+      <div><label>Tipo <span class="req">*</span></label>
+        <select id="d_type">
+          <option value="lead">Nuovo cliente → cartella in Lead</option>
+          <option value="commessa">Commessa già confermata</option>
+        </select>
+      </div>
+      <div id="d_commessa_wrap" style="display:none"><label>Commessa esistente <span class="req">*</span></label>
+        <input id="d_commessa" placeholder="Es. C31-Arianna Nocerino" list="dl_commesse"></div>
+    </div>
+    <div class="pathline" id="d_path"></div>
+  </div>
+
+  <div class="summary" id="summary"></div>
+  <div id="items"></div>
+  <button class="addbtn" id="addBtn">＋ Aggiungi posizione</button>
+</div>
+
+<div class="bottombar">
+  <div class="wrapb">
+    <button class="btn btn-save" id="saveBtn"><span class="em">💾</span>Salva</button>
+    <button class="btn btn-pdf"  id="pdfBtn"><span class="em">📄</span>PDF</button>
+    <button class="btn btn-cloud" id="cloudBtn"><span class="em">☁️</span>Dropbox</button>
+    <button class="btn btn-new"  id="newBtn"><span class="em">🗑️</span>Nuovo</button>
+  </div>
+</div>
+
+<!-- EDITOR DISEGNO/FOTO -->
+<div class="editor" id="editor">
+  <div class="ed-top">
+    <span class="title" id="edTitle">Disegno</span>
+    <button class="ed-btn tpl" id="edTplBtn">🗂 Disegno standard</button>
+    <button class="ed-btn" id="edUndo">↩︎ Indietro</button>
+    <button class="ed-btn" id="edClear">✖ Pulisci</button>
+  </div>
+  <div class="ed-canvaswrap"><canvas id="edCanvas"></canvas></div>
+  <div class="ed-bottom">
+    <span style="color:#fff;font-size:12px">Colore:</span>
+    <span class="swatch sel" style="background:#143d78" data-col="#143d78"></span>
+    <span class="swatch" style="background:#d23b3b" data-col="#d23b3b"></span>
+    <span class="swatch" style="background:#1e9e5a" data-col="#1e9e5a"></span>
+    <span class="swatch" style="background:#111" data-col="#111111"></span>
+    <span class="ed-width">Tratto:
+      <input type="range" id="edWidth" min="1" max="10" value="3" style="width:80px"></span>
+    <button class="ed-btn cancel" id="edCancel" style="margin-left:auto">Annulla</button>
+    <button class="ed-btn save" id="edSave">✓ Salva</button>
+  </div>
+</div>
+
+<!-- TEMPLATE PICKER -->
+<div class="tplmodal" id="tplmodal">
+  <div class="tplbox">
+    <h3>Scegli un disegno standard</h3>
+    <div class="tplgrid" id="tplgrid"></div>
+    <button class="ed-btn cancel" id="tplClose" style="margin-top:12px;width:100%">Chiudi</button>
+  </div>
+</div>
+
+<!-- IMPOSTAZIONI / DROPBOX -->
+<div class="cfgmodal" id="cfgmodal">
+  <div class="cfgbox">
+    <h3>☁️ Collegamento Dropbox</h3>
+    <div class="status off" id="cfgStatus">Non collegato</div>
+
+    <div id="cfgSetup">
+      <p style="font-size:13px;margin:6px 0">Collega Dropbox <b>una volta sola</b>. I rilievi verranno salvati in automatico nella cartella giusta.</p>
+      <ol>
+        <li>Apri <a href="https://www.dropbox.com/developers/apps" target="_blank">dropbox.com/developers/apps</a> → <b>Create app</b> → <i>Scoped access</i> → <i>Full Dropbox</i> → dai un nome.</li>
+        <li>Scheda <b>Permissions</b>: spunta <code>files.content.write</code> e <code>files.content.read</code> → <b>Submit</b>.</li>
+        <li>Scheda <b>Settings</b>: copia l'<b>App key</b> e incollala qui sotto.</li>
+      </ol>
+      <div class="fld"><label>App key</label><input id="dbxKey" placeholder="app key"></div>
+      <button class="act" id="dbxAuthBtn">1) Apri autorizzazione Dropbox</button>
+      <div id="dbxStep2" style="display:none">
+        <div class="fld"><label>Incolla qui il codice mostrato da Dropbox</label><input id="dbxCode" placeholder="codice di autorizzazione"></div>
+        <button class="act" id="dbxConfirm">2) Conferma e collega</button>
+      </div>
+      <div class="small">App key/secret restano solo sul tuo dispositivo. Il collegamento si rinnova da solo, non scade.</div>
+    </div>
+
+    <button class="act sec" id="dbxExportJson" style="margin-top:14px">📤 Esporta dati (JSON)</button>
+    <button class="act danger" id="dbxUnlink" style="display:none">Scollega Dropbox</button>
+    <button class="act sec" id="cfgClose">Chiudi</button>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   DF Fiore Installazioni — Rilievo Misura v2
+   Singola pagina, offline. Editor disegno/foto a schermo intero.
+   ============================================================ */
+const STORE_KEY='df_rilievo_v2';
+const DROPBOX_BASE='/Ufficio/COMMESSE/Commesse Installazioni 2026';
+const COMMESSE=['C3 Mes - Cancello Capannone Nuovo','C8 Mes - Porte in Ferro pallazzo',
+  'C.26 Vincenzo Palmieri','C29-Condominio c.Garibaldi 174','C30-Luigi Folletto zanzariere',
+  'C31-Arianna Nocerino','C32-Condominio Poggioreale','C33-Flomar-Maddaloni',
+  'C34-Caruso Geometra','C35-Tecno3-Telai','C36-Top solutions-Mobiletto','C37-C.I.A-Supporti strutturali'];
+
+/* Catalogo reale (dalla skill preventivi-fatture-fiore) */
+const OPZIONI={
+  tipologia:['Finestra','Portafinestra','Scorrevole','Veranda','Persiana','Tapparella','Cassonetto',
+    'Zanzariera','Cancello battente','Cancello scorrevole','Grata/Inferriata','Porta in ferro','Portone',
+    'Vetrata fissa','Copertura/Tettoia','Ringhiera/Parapetto','Porta blindata','Controtelaio','Serranda',
+    'Tenda da sole','Mobile/Copricaldaia','Lattoneria','Altro'],
+  serie:['Alluminio freddo MAR45','Alluminio termico MAR73HTi','Scorrevole freddo MAS60',
+    'Scorrevole termico MAS65TT','Persiana MAR45 SP54','Ferro zincato','Ferro zincato e verniciato',
+    'PVC','Alluminio coibentato'],
+  colore:['RAL 9010 Bianco','RAL 1013 Avorio','RAL 8017 Marrone','RAL 6005 Verde','RAL 9005 Nero',
+    'RAL 7016 Grigio antracite','Grigio raffaello','Marrone raffaello','Alluminio anodizzato',
+    'Effetto legno Noce','Effetto legno Ciliegio','Effetto legno Rovere'],
+  vetri:['Vetrocamera 4/12/4 standard','Basso emissivo','Satinato','Stratificato/Antinfortunio','Acustico','Triplo vetro'],
+  telaio:['Su controtelaio esistente','Nuovo controtelaio singolo','Nuovo controtelaio doppio','A muro',
+    'Distanziale a C 100mm','Distanziale a C 120mm','Falso telaio'],
+  apertura:['1 anta DX','1 anta SX','2 ante','Anta-ribalta DX','Anta-ribalta SX','2 ante + ribalta','Fisso','Scorrevole','Vasistas'],
+  casTipo:['Tradizionale','Cilindro'],
+  pos:['Cucina','Soggiorno','Camera 1','Camera 2','Camera 3','Bagno','Bagno 2','Ingresso','Studio','Ripostiglio','Garage','Cantina','Mansarda','Balcone','Terrazzo']
+};
+
+/* ---------- DISEGNI STANDARD (template) ---------- */
+const TEMPLATES={
+  finestra1:{nome:'Finestra 1 anta',draw:rectAnta(1,false)},
+  finestra2:{nome:'Finestra 2 ante',draw:rectAnta(2,false)},
+  ribalta:{nome:'Anta-ribalta',draw:drawRibalta},
+  pf1:{nome:'Portafinestra 1 anta',draw:rectAnta(1,true)},
+  pf2:{nome:'Portafinestra 2 ante',draw:rectAnta(2,true)},
+  scorrevole:{nome:'Scorrevole 2 ante',draw:drawScorrevole},
+  fisso:{nome:'Fisso',draw:drawFisso},
+  persiana:{nome:'Persiana',draw:drawPersiana},
+  tappcass:{nome:'Cassonetto+Tapparella',draw:drawTappCass}
+};
+function frame(ctx,w,h,tall){const m=Math.min(w,h)*0.12;const x=m,y=m,W=w-2*m,H=h-2*m;
+  ctx.strokeStyle='#143d78';ctx.lineWidth=2;ctx.strokeRect(x,y,W,H);return{x,y,W,H};}
+function rectAnta(n,tall){return function(ctx,w,h){const f=frame(ctx,w,h,tall);
+  const seg=f.W/n;for(let i=0;i<n;i++){const cx=f.x+seg*i;ctx.strokeRect(cx,f.y,seg,f.H);
+    ctx.beginPath();ctx.moveTo(cx,f.y+f.H);ctx.lineTo(cx+seg/2,f.y);ctx.lineTo(cx+seg,f.y+f.H);ctx.stroke();}};}
+function drawRibalta(ctx,w,h){const f=frame(ctx,w,h);ctx.beginPath();
+  ctx.moveTo(f.x,f.y+f.H);ctx.lineTo(f.x+f.W/2,f.y);ctx.lineTo(f.x+f.W,f.y+f.H);ctx.stroke();
+  ctx.setLineDash([6,4]);ctx.beginPath();ctx.moveTo(f.x,f.y);ctx.lineTo(f.x+f.W/2,f.y+f.H);ctx.lineTo(f.x+f.W,f.y);ctx.stroke();ctx.setLineDash([]);}
+function drawScorrevole(ctx,w,h){const f=frame(ctx,w,h);ctx.strokeRect(f.x,f.y,f.W/2,f.H);ctx.strokeRect(f.x+f.W/2,f.y,f.W/2,f.H);
+  const my=f.y+f.H/2;arrow(ctx,f.x+f.W*0.2,my,f.x+f.W*0.45,my);arrow(ctx,f.x+f.W*0.8,my,f.x+f.W*0.55,my);}
+function drawFisso(ctx,w,h){const f=frame(ctx,w,h);ctx.beginPath();ctx.moveTo(f.x,f.y);ctx.lineTo(f.x+f.W,f.y+f.H);
+  ctx.moveTo(f.x+f.W,f.y);ctx.lineTo(f.x,f.y+f.H);ctx.stroke();}
+function drawPersiana(ctx,w,h){const f=frame(ctx,w,h);const n=8;for(let i=1;i<n;i++){const yy=f.y+f.H*i/n;
+  ctx.beginPath();ctx.moveTo(f.x,yy);ctx.lineTo(f.x+f.W,yy);ctx.stroke();}ctx.beginPath();ctx.moveTo(f.x+f.W/2,f.y);ctx.lineTo(f.x+f.W/2,f.y+f.H);ctx.stroke();}
+function drawTappCass(ctx,w,h){const m=Math.min(w,h)*0.12;const x=m,W=w-2*m;const boxH=(h-2*m)*0.18;
+  ctx.strokeStyle='#143d78';ctx.lineWidth=2;ctx.strokeRect(x,m,W,boxH);
+  const fy=m+boxH+4,fH=h-2*m-boxH-4;ctx.strokeRect(x,fy,W,fH);const n=6;for(let i=1;i<n;i++){const yy=fy+fH*i/n;
+  ctx.beginPath();ctx.moveTo(x,yy);ctx.lineTo(x+W,yy);ctx.stroke();}}
+function arrow(ctx,x1,y1,x2,y2){ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  const a=Math.atan2(y2-y1,x2-x1),s=8;ctx.beginPath();ctx.moveTo(x2,y2);
+  ctx.lineTo(x2-s*Math.cos(a-0.4),y2-s*Math.sin(a-0.4));ctx.moveTo(x2,y2);
+  ctx.lineTo(x2-s*Math.cos(a+0.4),y2-s*Math.sin(a+0.4));ctx.stroke();}
+
+/* ---------- STATO ---------- */
+let state=normalize(load())||newRilievo();
+function newRilievo(){return{cliente:'',tel:'',via:'',vianote:'',lat:null,lng:null,
+  data:todayISO(),rilevatore:'',destType:'lead',destCommessa:'',items:[blankItem()]};}
+function blankItem(){return{pos:'',tipologia:'',serie:'',colore:'',vetri:'',telaio:'',apertura:'',
+  hmaniglia:'',L:'',H:'',PZ:'1',nota:'',cassonetto:'no',_confirm:true,
+  cas:{L:'',H:'',P:'',tipo:'',note:'',foto:[],disegno:null},
+  foto:[],disegno:null};}
+/* normalizza dati salvati da versioni precedenti */
+function normalize(s){if(!s)return s;(s.items||[]).forEach(it=>{
+  if(!Array.isArray(it.foto))it.foto=it.foto?[it.foto]:[];
+  if(it._confirm===undefined)it._confirm=true;
+  if(!it.cas)it.cas={L:'',H:'',P:'',tipo:'',note:'',foto:[],disegno:null};
+  if(!Array.isArray(it.cas.foto))it.cas.foto=it.cas.foto?[it.cas.foto]:[];});return s;}
+function todayISO(){const d=new Date();const z=n=>String(n).padStart(2,'0');
+  return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate());}
+
+/* ---------- HEADER ---------- */
+function renderHeader(){
+  c_cliente.value=state.cliente;c_tel.value=state.tel;c_via.value=state.via;
+  c_vianote.value=state.vianote||'';c_data.value=state.data||todayISO();
+  c_rilevatore.value=state.rilevatore;d_type.value=state.destType||'lead';d_commessa.value=state.destCommessa||'';
+  if(!document.getElementById('dl_commesse')){const d=document.createElement('div');
+    d.innerHTML='<datalist id="dl_commesse">'+COMMESSE.map(c=>'<option value="'+esc(c)+'">').join('')+'</datalist>';
+    document.body.appendChild(d);}
+  renderDestPath();
+}
+function destFolderName(){return(state.cliente||'Cliente senza nome').replace(/[\\/:*?"<>|]/g,'-').trim();}
+function destPath(){if(state.destType==='commessa'&&state.destCommessa)return DROPBOX_BASE+'/'+state.destCommessa;
+  return DROPBOX_BASE+'/Lead/'+destFolderName();}
+function renderDestPath(){document.getElementById('d_commessa_wrap').style.display=state.destType==='commessa'?'block':'none';
+  document.getElementById('d_path').innerHTML='Il PDF verrà salvato in:<br><b>'+esc(destPath())+'/</b>';}
+
+/* ---------- ITEMS ---------- */
+function dlOpts(arr){return arr.map(o=>'<option value="'+esc(o)+'">').join('');}
+function field(it,i,f,label,list,req){return '<div><label>'+label+(req?' <span class="req">*</span>':'')+
+  '</label><input data-f="'+f+'" data-i="'+i+'" value="'+esc(it[f])+'"'+(list?' list="dl_'+f+'"':'')+'></div>';}
+function renderItems(){
+  const box=document.getElementById('items');box.innerHTML='';
+  if(!document.getElementById('dl_tipologia')){const d=document.createElement('div');d.id='dls';
+    d.innerHTML=['tipologia','serie','colore','vetri','telaio','apertura','pos'].map(k=>
+      '<datalist id="dl_'+k+'">'+dlOpts(OPZIONI[k])+'</datalist>').join('');document.body.appendChild(d);}
+  state.items.forEach((it,i)=>{
+    const el=document.createElement('div');el.className='item'+(it._confirm===false?' toconfirm':'');
+    const casOn=it.cassonetto==='si';
+    el.innerHTML=`
+      ${it._confirm===false?`<div class="confirmbar">⚠️ Posizione duplicata: verifica e correggi i campi diversi, poi conferma. <button data-act="confirm" data-i="${i}">✓ Conferma posizione</button></div>`:''}
+      <div class="ihead"><span class="badge">Posizione ${i+1}</span>
+        <div style="display:flex;gap:6px">
+          <button class="iconbtn" data-act="dup" data-i="${i}">⧉ Duplica</button>
+          <button class="iconbtn del" data-act="del" data-i="${i}">🗑 Elimina</button></div></div>
+      <div class="grid g2">
+        ${field(it,i,'pos','Posizione (locale)','dl',1)}
+        ${field(it,i,'tipologia','Tipologia','dl',1)}</div>
+      <div class="grid meas g3" style="margin-top:10px">
+        <div><label>L (mm) <span class="req">*</span></label><input data-f="L" data-i="${i}" value="${esc(it.L)}" inputmode="numeric"></div>
+        <div><label>H (mm) <span class="req">*</span></label><input data-f="H" data-i="${i}" value="${esc(it.H)}" inputmode="numeric"></div>
+        <div><label>PZ <span class="req">*</span></label><input data-f="PZ" data-i="${i}" value="${esc(it.PZ)}" inputmode="numeric"></div></div>
+      <div class="grid g2" style="margin-top:10px">
+        ${field(it,i,'serie','Serie / Materiale','dl',1)}
+        ${field(it,i,'colore','Colore','dl',1)}
+        ${field(it,i,'vetri','Vetri','dl',1)}
+        ${field(it,i,'telaio','Telaio','dl',1)}
+        ${field(it,i,'apertura','Apertura','dl',1)}
+        <div><label>H maniglia <span class="req">*</span></label><input data-f="hmaniglia" data-i="${i}" value="${esc(it.hmaniglia)}" placeholder="cm da terra"></div></div>
+      <div class="grid g2" style="margin-top:10px">
+        <div><label>Cassonetto <span class="req">*</span></label>
+          <select data-f="cassonetto" data-i="${i}"><option value="no"${casOn?'':' selected'}>No</option><option value="si"${casOn?' selected':''}>Sì</option></select></div></div>
+      ${casOn?casBlock(it,i):''}
+      <div style="margin-top:10px"><label>Nota</label>
+        <textarea data-f="nota" data-i="${i}" placeholder="Annotazioni per produzione/montaggio…">${esc(it.nota)}</textarea></div>
+      <div class="medialabel">✏️ Disegno della posizione <span class="req">*</span></div>
+      <div class="thumbs">${mediaThumb(it.disegno,'disegno',i)}</div>
+      <div class="medialabel">📷 Foto <span class="req">*</span> (puoi annotarle)</div>
+      <div class="thumbs" id="foto${i}">
+        ${it.foto.map((m,j)=>'<div class="thumb" data-act="editfoto" data-i="'+i+'" data-j="'+j+'"><img src="'+m.img+'"><button class="x" data-act="delfoto" data-i="'+i+'" data-j="'+j+'">✕</button></div>').join('')}
+        <div class="thumb empty" data-act="addfoto" data-i="${i}"><span class="big">＋</span>Aggiungi foto</div></div>`;
+    box.appendChild(el);
+  });
+  updateSummary();
+}
+function casBlock(it,i){return `<div class="sub"><h3>📦 Dettaglio cassonetto</h3>
+  <div class="grid g3">
+    <div><label>Largh. (mm) <span class="req">*</span></label><input data-cf="L" data-i="${i}" value="${esc(it.cas.L)}" inputmode="numeric"></div>
+    <div><label>Alt. (mm) <span class="req">*</span></label><input data-cf="H" data-i="${i}" value="${esc(it.cas.H)}" inputmode="numeric"></div>
+    <div><label>Prof. (mm) <span class="req">*</span></label><input data-cf="P" data-i="${i}" value="${esc(it.cas.P)}" inputmode="numeric"></div></div>
+  <div class="grid g2" style="margin-top:10px">
+    <div><label>Tipo cassonetto <span class="req">*</span></label>
+      <select data-cf="tipo" data-i="${i}"><option value=""></option>${OPZIONI.casTipo.map(t=>'<option'+(it.cas.tipo===t?' selected':'')+'>'+t+'</option>').join('')}</select></div>
+    <div><label>Note cassonetto</label><input data-cf="note" data-i="${i}" value="${esc(it.cas.note)}"></div></div>
+  <div class="medialabel">Foto cassonetto</div>
+  <div class="thumbs">
+    ${it.cas.foto.map((m,j)=>'<div class="thumb" data-act="editcasfoto" data-i="'+i+'" data-j="'+j+'"><img src="'+m.img+'"><button class="x" data-act="delcasfoto" data-i="'+i+'" data-j="'+j+'">✕</button></div>').join('')}
+    <div class="thumb empty" data-act="addcasfoto" data-i="${i}"><span class="big">＋</span>Aggiungi foto</div></div>
+  <div class="medialabel">Disegno cassonetto</div><div class="thumbs">${mediaThumb(it.cas.disegno,'casdis',i)}</div></div>`;}
+function mediaThumb(m,kind,i){
+  if(m&&m.img)return '<div class="thumb" data-act="edit-'+kind+'" data-i="'+i+'"><img src="'+m.img+'"><button class="x" data-act="del-'+kind+'" data-i="'+i+'">✕</button></div>';
+  return '<div class="thumb empty" data-act="edit-'+kind+'" data-i="'+i+'"><span class="big">✏️</span>Disegna</div>';}
+function updateSummary(){const pz=state.items.reduce((s,it)=>s+(parseInt(it.PZ)||0),0);
+  document.getElementById('summary').innerHTML='<b>'+state.items.length+'</b> posizioni · <b>'+pz+'</b> pezzi totali';}
+
+/* ---------- EVENTI INPUT ---------- */
+document.addEventListener('input',e=>{
+  const t=e.target;
+  if(t.dataset.f!==undefined&&t.dataset.i!==undefined){state.items[t.dataset.i][t.dataset.f]=t.value;
+    t.classList.remove('missing');if(t.dataset.f==='PZ')updateSummary();save();}
+  else if(t.dataset.cf!==undefined){state.items[t.dataset.i].cas[t.dataset.cf]=t.value;t.classList.remove('missing');save();}
+});
+document.addEventListener('change',e=>{ // cassonetto sì/no + tipo select
+  const t=e.target;
+  if(t.dataset.f==='cassonetto'){state.items[t.dataset.i].cassonetto=t.value;save();renderItems();}
+  else if(t.dataset.cf==='tipo'){state.items[t.dataset.i].cas.tipo=t.value;save();}
+});
+['c_cliente','c_tel','c_via','c_vianote','c_data','c_rilevatore'].forEach(id=>{
+  document.getElementById(id).addEventListener('input',e=>{
+    const map={c_cliente:'cliente',c_tel:'tel',c_via:'via',c_vianote:'vianote',c_data:'data',c_rilevatore:'rilevatore'};
+    state[map[id]]=e.target.value;e.target.classList.remove('missing');if(id==='c_cliente')renderDestPath();save();});
+});
+d_type.addEventListener('change',e=>{state.destType=e.target.value;renderDestPath();save();});
+d_commessa.addEventListener('input',e=>{state.destCommessa=e.target.value;e.target.classList.remove('missing');renderDestPath();save();});
+
+/* ---------- EVENTI CLICK ---------- */
+document.addEventListener('click',e=>{
+  const tgt=e.target.closest('[data-act]');if(!tgt)return;
+  const a=tgt.dataset.act,i=tgt.dataset.i,j=tgt.dataset.j;
+  if(a==='del'){if(confirm('Eliminare questa posizione?')){state.items.splice(i,1);
+    if(!state.items.length)state.items.push(blankItem());save();renderItems();}}
+  else if(a==='dup'){const c=JSON.parse(JSON.stringify(state.items[i]));
+    c.foto=[];c.cas.foto=[];c._confirm=false; // foto non duplicate; richiede conferma
+    state.items.splice(parseInt(i)+1,0,c);save();renderItems();}
+  else if(a==='confirm'){state.items[i]._confirm=true;save();renderItems();}
+  else if(a==='edit-disegno'){editMedia(state.items[i].disegno,'Disegno posizione '+(+i+1),true,m=>{state.items[i].disegno=m;save();renderItems();});}
+  else if(a==='del-disegno'){e.stopPropagation();state.items[i].disegno=null;save();renderItems();}
+  else if(a==='edit-casdis'){editMedia(state.items[i].cas.disegno,'Disegno cassonetto',true,m=>{state.items[i].cas.disegno=m;save();renderItems();});}
+  else if(a==='del-casdis'){e.stopPropagation();state.items[i].cas.disegno=null;save();renderItems();}
+  else if(a==='addcasfoto'){pickPhoto(src=>editMedia({bg:src,strokes:[]},'Foto cassonetto',false,m=>{state.items[i].cas.foto.push(m);save();renderItems();}));}
+  else if(a==='editcasfoto'){const m=state.items[i].cas.foto[j];editMedia(m,'Foto cassonetto',false,nm=>{state.items[i].cas.foto[j]=nm;save();renderItems();});}
+  else if(a==='delcasfoto'){e.stopPropagation();state.items[i].cas.foto.splice(j,1);save();renderItems();}
+  else if(a==='addfoto'){pickPhoto(src=>editMedia({bg:src,strokes:[]},'Foto',false,m=>{state.items[i].foto.push(m);save();renderItems();}));}
+  else if(a==='editfoto'){const m=state.items[i].foto[j];editMedia(m,'Foto',false,nm=>{state.items[i].foto[j]=nm;save();renderItems();});}
+  else if(a==='delfoto'){e.stopPropagation();state.items[i].foto.splice(j,1);save();renderItems();}
+});
+document.getElementById('addBtn').onclick=()=>{state.items.push(blankItem());save();renderItems();window.scrollTo(0,document.body.scrollHeight);};
+document.getElementById('saveBtn').onclick=()=>{
+  try{localStorage.setItem(STORE_KEY,JSON.stringify(state));toast('Bozza salvata sul dispositivo ✓',true);}
+  catch(e){toast('Memoria piena: usa Esporta dati',false);}};
+function toast(msg,ok){const s=document.getElementById('savestate');s.textContent=msg;
+  s.classList.toggle('err',!ok);s.classList.add('show');setTimeout(()=>s.classList.remove('show'),1800);}
+document.getElementById('newBtn').onclick=()=>{if(confirm('Iniziare un NUOVO rilievo? (quello attuale resta salvato solo se esportato)')){
+  state=newRilievo();save();renderHeader();renderItems();}};
+document.getElementById('cloudBtn').onclick=saveToDropbox;
+document.getElementById('pdfBtn').onclick=()=>{if(validate())exportPDF();};
+
+/* ---------- FOTO (camera/file) ---------- */
+function pickPhoto(cb){
+  const ov=document.createElement('div');ov.className='psheet';
+  ov.innerHTML='<div class="psheet-box"><button data-src="camera">📷 Scatta foto</button>'+
+    '<button data-src="gallery">🖼 Carica dalla galleria</button><button data-src="cancel" class="c">Annulla</button></div>';
+  document.body.appendChild(ov);
+  ov.addEventListener('click',ev=>{const b=ev.target.closest('[data-src]');
+    if(!b){if(ev.target===ov)ov.remove();return;}const s=b.dataset.src;ov.remove();if(s==='cancel')return;
+    const inp=document.createElement('input');inp.type='file';inp.accept='image/*';if(s==='camera')inp.capture='environment';
+    inp.onchange=()=>{if(inp.files[0]){const r=new FileReader();r.onload=()=>resizeImage(r.result,1280,cb);r.readAsDataURL(inp.files[0]);}};
+    inp.click();});}
+
+/* ---------- EDITOR DISEGNO/FOTO ---------- */
+let ed={canvas:null,ctx:null,bg:null,tpl:null,strokes:[],cur:null,color:'#143d78',width:3,onSave:null,allowTpl:false,bgImg:null};
+function editMedia(media,title,allowTpl,onSave){
+  ed.strokes=media&&media.strokes?JSON.parse(JSON.stringify(media.strokes)):[];
+  ed.bg=media&&media.bg?media.bg:null; ed.tpl=media&&media.tpl?media.tpl:null;
+  ed.onSave=onSave; ed.allowTpl=allowTpl; ed.color='#143d78'; ed.width=3; ed.bgImg=null;
+  document.getElementById('edTitle').textContent=title;
+  document.getElementById('edTplBtn').style.display=allowTpl?'inline-block':'none';
+  document.querySelectorAll('.swatch').forEach(s=>s.classList.toggle('sel',s.dataset.col===ed.color));
+  document.getElementById('edWidth').value=3;
+  document.getElementById('editor').classList.add('open');
+  setTimeout(setupEdCanvas,30);
+}
+function setupEdCanvas(){
+  const wrap=document.querySelector('.ed-canvaswrap');const cv=document.getElementById('edCanvas');
+  ed.canvas=cv;const maxW=wrap.clientWidth-20,maxH=wrap.clientHeight-20;
+  let cw=maxW,ch=maxH;
+  if(ed.bg){ // dimensioni in base alla foto
+    // calcolato dopo il load
+  }
+  cv.style.width=cw+'px';cv.style.height=ch+'px';
+  const ratio=window.devicePixelRatio||1;cv.width=cw*ratio;cv.height=ch*ratio;
+  ed.ctx=cv.getContext('2d');ed.ctx.scale(ratio,ratio);ed._w=cw;ed._h=ch;
+  if(ed.bg){ed.bgImg=new Image();ed.bgImg.onload=()=>{fitBg(cw,ch);redrawEd();};ed.bgImg.src=ed.bg;}
+  else redrawEd();
+}
+function fitBg(cw,ch){ // adatta canvas all'aspect ratio della foto
+  const img=ed.bgImg;if(!img)return;const ar=img.width/img.height;let w=cw,h=cw/ar;
+  if(h>ch){h=ch;w=ch*ar;}const cv=ed.canvas;cv.style.width=w+'px';cv.style.height=h+'px';
+  const ratio=window.devicePixelRatio||1;cv.width=w*ratio;cv.height=h*ratio;
+  ed.ctx=cv.getContext('2d');ed.ctx.scale(ratio,ratio);ed._w=w;ed._h=h;
+}
+function redrawEd(){const ctx=ed.ctx,w=ed._w,h=ed._h;ctx.clearRect(0,0,w,h);
+  ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);
+  if(ed.bgImg&&ed.bgImg.complete)ctx.drawImage(ed.bgImg,0,0,w,h);
+  if(ed.tpl&&TEMPLATES[ed.tpl]){ctx.save();ctx.lineWidth=2;ctx.strokeStyle='#143d78';TEMPLATES[ed.tpl].draw(ctx,w,h);ctx.restore();}
+  ed.strokes.forEach(st=>{ctx.strokeStyle=st.c;ctx.lineWidth=st.w;ctx.lineCap='round';ctx.lineJoin='round';
+    ctx.beginPath();st.p.forEach((pt,k)=>k?ctx.lineTo(pt.x,pt.y):ctx.moveTo(pt.x,pt.y));ctx.stroke();});}
+function edPos(e){const r=ed.canvas.getBoundingClientRect();const t=e.touches?e.touches[0]:e;
+  return{x:(t.clientX-r.left)*ed._w/r.width,y:(t.clientY-r.top)*ed._h/r.height};}
+function edStart(e){e.preventDefault();ed.cur={c:ed.color,w:ed.width,p:[edPos(e)]};ed.strokes.push(ed.cur);}
+function edMove(e){if(!ed.cur)return;e.preventDefault();ed.cur.p.push(edPos(e));redrawEd();}
+function edEnd(){ed.cur=null;}
+(function bindEd(){const cv=document.getElementById('edCanvas');
+  cv.addEventListener('mousedown',edStart);cv.addEventListener('mousemove',edMove);window.addEventListener('mouseup',edEnd);
+  cv.addEventListener('touchstart',edStart,{passive:false});cv.addEventListener('touchmove',edMove,{passive:false});cv.addEventListener('touchend',edEnd);})();
+document.querySelectorAll('.swatch').forEach(s=>s.onclick=()=>{ed.color=s.dataset.col;
+  document.querySelectorAll('.swatch').forEach(x=>x.classList.toggle('sel',x===s));});
+document.getElementById('edWidth').oninput=e=>ed.width=+e.target.value;
+document.getElementById('edUndo').onclick=()=>{ed.strokes.pop();redrawEd();};
+document.getElementById('edClear').onclick=()=>{ed.strokes=[];redrawEd();};
+document.getElementById('edCancel').onclick=()=>document.getElementById('editor').classList.remove('open');
+document.getElementById('edSave').onclick=()=>{const img=ed.canvas.toDataURL(ed.bg?'image/jpeg':'image/png',0.85);
+  ed.onSave({bg:ed.bg,tpl:ed.tpl,strokes:ed.strokes,img:img});document.getElementById('editor').classList.remove('open');};
+
+/* ---------- TEMPLATE PICKER ---------- */
+document.getElementById('edTplBtn').onclick=()=>{const g=document.getElementById('tplgrid');
+  if(!g.dataset.built){g.innerHTML=Object.keys(TEMPLATES).map(id=>
+    '<div class="tplcell" data-tpl="'+id+'"><canvas id="tpc_'+id+'"></canvas><span>'+TEMPLATES[id].nome+'</span></div>').join('');
+    g.dataset.built='1';
+    Object.keys(TEMPLATES).forEach(id=>{const c=document.getElementById('tpc_'+id);c.width=140;c.height=80;
+      const x=c.getContext('2d');x.strokeStyle='#143d78';x.lineWidth=2;TEMPLATES[id].draw(x,140,80);});}
+  document.getElementById('tplmodal').classList.add('open');};
+document.getElementById('tplClose').onclick=()=>document.getElementById('tplmodal').classList.remove('open');
+document.getElementById('tplgrid').onclick=e=>{const cell=e.target.closest('[data-tpl]');if(!cell)return;
+  ed.tpl=cell.dataset.tpl;document.getElementById('tplmodal').classList.remove('open');redrawEd();};
+
+/* ---------- GPS + SUGGERIMENTI INDIRIZZO (Nominatim, solo online) ---------- */
+document.getElementById('gpsBtn').onclick=()=>{const hint=document.getElementById('gpsHint');
+  if(!navigator.geolocation){hint.textContent='GPS non disponibile';return;}
+  hint.textContent='📍 rilevamento posizione…';
+  navigator.geolocation.getCurrentPosition(p=>{state.lat=p.coords.latitude;state.lng=p.coords.longitude;
+    fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat='+state.lat+'&lon='+state.lng+'&email=fioreinstallazioni@gmail.com')
+    .then(r=>r.json()).then(d=>{if(d&&d.display_name){c_via.value=d.display_name;state.via=d.display_name;c_via.classList.remove('missing');}
+      hint.innerHTML='✓ <a href="https://maps.google.com/?q='+state.lat+','+state.lng+'" target="_blank">apri in mappa</a>';save();})
+    .catch(()=>{hint.textContent='✓ posizione presa (indirizzo non risolto, sei offline?)';save();});
+  },()=>hint.textContent='Posizione negata o non disponibile',{enableHighAccuracy:true,timeout:10000});};
+let viaTimer=null;
+c_via.addEventListener('input',()=>{clearTimeout(viaTimer);const q=c_via.value.trim();
+  const list=document.getElementById('viaSugg');if(q.length<4){list.style.display='none';return;}
+  viaTimer=setTimeout(()=>{fetch('https://nominatim.openstreetmap.org/search?format=json&countrycodes=it&limit=5&q='+encodeURIComponent(q)+'&email=fioreinstallazioni@gmail.com')
+    .then(r=>r.json()).then(arr=>{if(!arr.length){list.style.display='none';return;}
+      list.innerHTML=arr.map(a=>'<div>'+esc(a.display_name)+'</div>').join('');list.style.display='block';
+      [...list.children].forEach((d,k)=>d.onclick=()=>{c_via.value=arr[k].display_name;state.via=arr[k].display_name;
+        state.lat=+arr[k].lat;state.lng=+arr[k].lon;c_via.classList.remove('missing');list.style.display='none';save();});})
+    .catch(()=>list.style.display='none');},600);});
+document.addEventListener('click',e=>{if(e.target!==c_via)document.getElementById('viaSugg').style.display='none';});
+
+/* ---------- VALIDAZIONE (tutti i campi obbligatori) ---------- */
+function validate(){
+  document.querySelectorAll('.missing').forEach(x=>x.classList.remove('missing'));
+  const miss=[];let firstEl=null;
+  const reqH=[['c_cliente','Cliente'],['c_tel','Telefono'],['c_via','Indirizzo'],['c_data','Data'],['c_rilevatore','Rilevatore']];
+  reqH.forEach(([id,lab])=>{const el=document.getElementById(id);if(!el.value.trim()){el.classList.add('missing');miss.push(lab);firstEl=firstEl||el;}});
+  if(state.destType==='commessa'&&!state.destCommessa.trim()){d_commessa.classList.add('missing');miss.push('Commessa');firstEl=firstEl||d_commessa;}
+  const reqI=['pos','tipologia','L','H','PZ','serie','colore','vetri','telaio','apertura','hmaniglia'];
+  state.items.forEach((it,i)=>{
+    if(it._confirm===false)miss.push('Pos.'+(i+1)+': confermare posizione duplicata');
+    reqI.forEach(f=>{if(!String(it[f]).trim()){const el=document.querySelector('[data-f="'+f+'"][data-i="'+i+'"]');
+      if(el)el.classList.add('missing');miss.push('Pos.'+(i+1)+': '+f);firstEl=firstEl||el;}});
+    if(!it.disegno||!it.disegno.img)miss.push('Pos.'+(i+1)+': disegno');
+    if(!it.foto.length)miss.push('Pos.'+(i+1)+': almeno 1 foto');
+    if(it.cassonetto==='si'){['L','H','P','tipo'].forEach(f=>{if(!String(it.cas[f]).trim()){
+      const el=document.querySelector('[data-cf="'+f+'"][data-i="'+i+'"]');if(el)el.classList.add('missing');
+      miss.push('Pos.'+(i+1)+' cassonetto: '+f);firstEl=firstEl||el;}});}
+  });
+  if(miss.length){if(firstEl)firstEl.scrollIntoView({behavior:'smooth',block:'center'});
+    alert('Compila tutti i campi obbligatori:\n\n• '+miss.slice(0,25).join('\n• ')+(miss.length>25?'\n…':''));return false;}
+  return true;
+}
+
+/* ---------- SALVATAGGIO ---------- */
+function save(flash){try{localStorage.setItem(STORE_KEY,JSON.stringify(state));}catch(e){}
+  if(flash){const s=document.getElementById('savestate');s.classList.add('show');setTimeout(()=>s.classList.remove('show'),1200);}}
+function load(){try{return JSON.parse(localStorage.getItem(STORE_KEY));}catch(e){return null;}}
+
+/* ---------- EXPORT DATI ---------- */
+function exportData(){const clean=JSON.parse(JSON.stringify(state));clean.dropbox_folder=destPath();
+  const blob=new Blob([JSON.stringify(clean,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='rilievo_'+destFolderName().replace(/\s+/g,'_')+'_'+state.data+'.json';
+  a.click();URL.revokeObjectURL(url);}
+
+/* ---------- REPORT (markup condiviso PDF) ---------- */
+function buildReportInner(){
+  const rows=state.items.map((it,i)=>{
+    const imgs=[it.disegno].concat(it.foto).filter(m=>m&&m.img).map(m=>'<img src="'+m.img+'">').join('');
+    const cas=it.cassonetto==='si'?`<div class="pcas"><b>Cassonetto ${esc(it.cas.tipo)}:</b> ${esc(it.cas.L)}×${esc(it.cas.H)}×${esc(it.cas.P)} mm ${esc(it.cas.note)}
+      ${[it.cas.disegno].concat(it.cas.foto).filter(m=>m&&m.img).map(m=>'<img src="'+m.img+'">').join('')}</div>`:'';
+    return `<table class="pblock"><tr>
+      <td class="plabels">
+        <div><b>Pos. ${i+1}:</b> ${esc(it.pos)||'&nbsp;'}</div>
+        <div>Tipologia: ${esc(it.tipologia)}</div><div>Serie: ${esc(it.serie)}</div>
+        <div>Colore: ${esc(it.colore)}</div><div>Vetri: ${esc(it.vetri)}</div>
+        <div>Telaio: ${esc(it.telaio)}</div><div>Apertura: ${esc(it.apertura)}</div>
+        <div>H maniglia: ${esc(it.hmaniglia)}</div>
+        <div>Cassonetto: ${it.cassonetto==='si'?'Sì':'No'}</div></td>
+      <td class="pmain">
+        <div class="pmeas"><span>L <b>${esc(it.L)}</b></span><span>H <b>${esc(it.H)}</b></span><span>PZ <b>${esc(it.PZ)}</b></span></div>
+        <div class="pmedia">${imgs}</div>${cas}
+        <div class="pnota">Nota: ${esc(it.nota)}</div></td></tr></table>`;}).join('');
+  const pz=state.items.reduce((s,it)=>s+(parseInt(it.PZ)||0),0);
+  return `<style>
+    body{font-family:Arial,sans-serif;color:#000;font-size:12px}
+    .head{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #1a4f9c;padding-bottom:6px;margin-bottom:8px}
+    .head .t{font-size:26px;font-weight:800;color:#1a4f9c}
+    .head .logo{font-size:22px;font-weight:800;color:#fff;background:#1a4f9c;padding:3px 8px;border-radius:4px}
+    .ci{width:100%;border-collapse:collapse;margin-bottom:10px}.ci td{border:1px solid #000;padding:4px 6px}
+    .pblock{width:100%;border-collapse:collapse;margin-bottom:8px;page-break-inside:avoid}
+    .pblock td{border:1px solid #000;vertical-align:top}.plabels{width:30%;padding:4px 6px}
+    .plabels div{border-bottom:1px solid #ccc;padding:2px 0}.pmain{padding:6px}
+    .pmeas{display:flex;gap:18px;font-size:15px;border-bottom:1px solid #000;padding-bottom:4px;margin-bottom:4px}
+    .pmedia{display:flex;gap:6px;flex-wrap:wrap}.pmedia img{max-height:150px;max-width:31%;border:1px solid #ccc;object-fit:contain}
+    .pcas{margin-top:4px;border-top:1px dashed #999;padding-top:3px}.pcas img{max-height:110px;max-width:30%;border:1px solid #ccc;margin:3px 3px 0 0}
+    .pnota{margin-top:4px;border-top:1px solid #000;padding-top:3px;min-height:18px}
+    .foot{margin-top:8px;font-size:11px;color:#555;display:flex;justify-content:space-between}</style>
+    <div class="head"><div><div class="logo">DF</div> <span class="t">Scheda Rilievi</span></div>
+      <div style="text-align:right;font-size:11px">Fiore Installazioni s.r.l.s.<br>Rilievo del ${fmtDate(state.data)}</div></div>
+    <table class="ci"><tr><td><b>Cliente:</b> ${esc(state.cliente)}</td><td><b>Tel:</b> ${esc(state.tel)}</td></tr>
+      <tr><td colspan="2"><b>Indirizzo:</b> ${esc(state.via)}</td></tr>
+      ${state.vianote?'<tr><td colspan="2"><b>Note:</b> '+esc(state.vianote)+'</td></tr>':''}
+      <tr><td><b>Rilevatore:</b> ${esc(state.rilevatore)}</td><td><b>Cartella:</b> ${esc(destPath())}/</td></tr></table>
+    ${rows}
+    <div class="foot"><span>${state.items.length} posizioni · ${pz} pezzi totali</span><span>Firma cliente: ________________</span></div>`;
+}
+/* PDF "stampa" (apre finestra di stampa del browser) */
+function exportPDF(){const w=window.open('','_blank');
+  w.document.write('<!DOCTYPE html><html lang="it"><head><meta charset="utf-8"><title>Rilievo '+esc(state.cliente)+
+    '</title><style>@page{size:A4;margin:12mm}</style></head><body>'+buildReportInner()+
+    '<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print()},400)}</scr'+'ipt></body></html>');
+  w.document.close();}
+
+/* ============================================================
+   DROPBOX — collegamento OAuth (token che si rinnova) + upload
+   ============================================================ */
+const DBX_KEY='df_dropbox_cfg';
+function getDbx(){try{return JSON.parse(localStorage.getItem(DBX_KEY))||{};}catch(e){return {};}}
+function setDbx(c){localStorage.setItem(DBX_KEY,JSON.stringify(c));}
+function dbxLinked(){return !!getDbx().refresh;}
+function asciiSafe(s){return s.replace(/[-￿]/g,c=>'\\u'+c.charCodeAt(0).toString(16).padStart(4,'0'));}
+
+function b64url(buf){let s='';const b=new Uint8Array(buf);for(let i=0;i<b.length;i++)s+=String.fromCharCode(b[i]);
+  return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
+async function pkce(){const v=b64url(crypto.getRandomValues(new Uint8Array(48)));
+  const h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v));return {v:v,c:b64url(h)};}
+
+async function dbxAccessToken(){
+  const c=getDbx();if(!c.refresh)throw new Error('Dropbox non collegato');
+  const r=await fetch('https://api.dropboxapi.com/oauth2/token',{method:'POST',
+    headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:new URLSearchParams({grant_type:'refresh_token',refresh_token:c.refresh,client_id:c.key})});
+  const d=await r.json();if(!d.access_token)throw new Error('Rinnovo token fallito: '+(d.error_description||JSON.stringify(d)));
+  return d.access_token;}
+
+async function dbxExchangeCode(code){
+  const c=getDbx();
+  const r=await fetch('https://api.dropboxapi.com/oauth2/token',{method:'POST',
+    headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:new URLSearchParams({code:code.trim(),grant_type:'authorization_code',client_id:c.key,code_verifier:c.verifier||''})});
+  const d=await r.json();if(!d.refresh_token)throw new Error(d.error_description||d.error||'Codice non valido');
+  c.refresh=d.refresh_token;delete c.verifier;setDbx(c);return true;}
+
+async function dbxUpload(path,blob,token){
+  const r=await fetch('https://content.dropboxapi.com/2/files/upload',{method:'POST',
+    headers:{'Authorization':'Bearer '+token,'Content-Type':'application/octet-stream',
+      'Dropbox-API-Arg':asciiSafe(JSON.stringify({path:path,mode:'add',autorename:true,mute:true}))},
+    body:blob});
+  if(!r.ok)throw new Error('Upload fallito: '+(await r.text()));return r.json();}
+
+/* genera il PDF come Blob (librerie caricate al volo, serve internet) */
+function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');
+  s.src=src;s.onload=res;s.onerror=()=>rej(new Error('Impossibile caricare '+src));document.head.appendChild(s);});}
+async function buildPdfBlob(){
+  if(!window.jspdf)await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+  if(!window.html2canvas)await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+  const {jsPDF}=window.jspdf;const doc=new jsPDF('p','pt','a4');
+  const cont=document.createElement('div');cont.style.cssText='position:fixed;left:-9999px;top:0;width:900px;background:#fff;padding:24px';
+  cont.innerHTML=buildReportInner();document.body.appendChild(cont);
+  await doc.html(cont,{x:0,y:0,html2canvas:{scale:0.62,useCORS:true},autoPaging:'text',width:595,windowWidth:948});
+  cont.remove();return doc.output('blob');}
+
+async function saveToDropbox(){
+  if(!validate())return;
+  if(!dbxLinked()){openCfg();toast('Collega prima Dropbox (⚙️)',false);return;}
+  const btn=document.getElementById('cloudBtn');const old=btn.innerHTML;
+  btn.innerHTML='<span class="em">⏳</span>Salvo…';btn.style.pointerEvents='none';
+  try{
+    const token=await dbxAccessToken();
+    const base=destPath();const fname=destFolderName().replace(/\s+/g,'_')+'_'+state.data;
+    const pdf=await buildPdfBlob();
+    await dbxUpload(base+'/Rilievo_'+fname+'.pdf',pdf,token);
+    const json=new Blob([JSON.stringify(Object.assign({},state,{dropbox_folder:base}),null,2)],{type:'application/json'});
+    await dbxUpload(base+'/dati_'+fname+'.json',json,token);
+    toast('Salvato in Dropbox ✓',true);
+    alert('✓ Rilievo salvato in Dropbox:\n'+base+'/');
+  }catch(e){toast('Errore Dropbox',false);alert('Errore nel salvataggio:\n'+e.message);}
+  finally{btn.innerHTML=old;btn.style.pointerEvents='';}
+}
+
+/* UI impostazioni */
+function openCfg(){const linked=dbxLinked();
+  document.getElementById('cfgStatus').textContent=linked?'✓ Dropbox collegato':'Non collegato';
+  document.getElementById('cfgStatus').className='status '+(linked?'on':'off');
+  document.getElementById('cfgSetup').style.display=linked?'none':'block';
+  document.getElementById('dbxUnlink').style.display=linked?'block':'none';
+  const c=getDbx();document.getElementById('dbxKey').value=c.key||'';
+  document.getElementById('dbxStep2').style.display='none';
+  document.getElementById('cfgmodal').classList.add('open');}
+document.getElementById('cfgBtn').onclick=openCfg;
+document.getElementById('cfgClose').onclick=()=>document.getElementById('cfgmodal').classList.remove('open');
+document.getElementById('dbxExportJson').onclick=exportData;
+document.getElementById('dbxUnlink').onclick=()=>{if(confirm('Scollegare Dropbox da questo dispositivo?')){setDbx({});openCfg();}};
+document.getElementById('dbxAuthBtn').onclick=async()=>{
+  const key=document.getElementById('dbxKey').value.trim();
+  if(!key){alert('Inserisci l\'App key');return;}
+  const p=await pkce();setDbx(Object.assign(getDbx(),{key:key,verifier:p.v}));
+  const url='https://www.dropbox.com/oauth2/authorize?client_id='+encodeURIComponent(key)+
+    '&response_type=code&token_access_type=offline&code_challenge='+p.c+'&code_challenge_method=S256'+
+    '&scope='+encodeURIComponent('files.content.write files.content.read');
+  window.open(url,'_blank');document.getElementById('dbxStep2').style.display='block';};
+document.getElementById('dbxConfirm').onclick=async()=>{
+  const code=document.getElementById('dbxCode').value.trim();if(!code){alert('Incolla il codice');return;}
+  try{await dbxExchangeCode(code);toast('Dropbox collegato ✓',true);openCfg();}
+  catch(e){alert('Collegamento fallito: '+e.message);}};
+
+/* ---------- UTILS ---------- */
+function esc(s){return(s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function fmtDate(iso){if(!iso)return'';const p=iso.split('-');return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:iso;}
+function resizeImage(src,max,cb){const img=new Image();img.onload=()=>{let w=img.width,h=img.height;
+  if(w>h&&w>max){h=h*max/w;w=max;}else if(h>max){w=w*max/h;h=max;}
+  const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);
+  cb(c.toDataURL('image/jpeg',0.82));};img.src=src;}
+
+/* ---------- INIT ---------- */
+renderHeader();renderItems();
+</script>
+</body>
+</html>
