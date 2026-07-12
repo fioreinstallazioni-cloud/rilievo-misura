@@ -418,7 +418,7 @@ const OPZIONI={
   tipologia:['Finestra','Portafinestra','Scorrevole','Veranda','Persiana','Tapparella','Cassonetto',
     'Zanzariera','Cancello battente','Cancello scorrevole','Grata/Inferriata','Porta in ferro','Portone',
     'Vetrata fissa','Copertura/Tettoia','Ringhiera/Parapetto','Porta blindata','Controtelaio','Serranda',
-    'Tenda da sole','Mobile/Copricaldaia','Lattoneria','Altro'],
+    'Tenda da sole','Mobile/Copricaldaia','Lattoneria','Carter','Elementi particolari','Riparazioni','Altro'],
   serie:['Alluminio freddo MAR45','Alluminio termico MAR73HTi','Scorrevole freddo MAS60',
     'Scorrevole termico MAS65TT','Persiana MAR45 SP54','Ferro zincato','Ferro zincato e verniciato',
     'PVC','Alluminio coibentato'],
@@ -467,6 +467,16 @@ function arrow(ctx,x1,y1,x2,y2){ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,
   const a=Math.atan2(y2-y1,x2-x1),s=8;ctx.beginPath();ctx.moveTo(x2,y2);
   ctx.lineTo(x2-s*Math.cos(a-0.4),y2-s*Math.sin(a-0.4));ctx.moveTo(x2,y2);
   ctx.lineTo(x2-s*Math.cos(a+0.4),y2-s*Math.sin(a+0.4));ctx.stroke();}
+
+/* ---------- CATEGORIE TIPOLOGIA ---------- */
+function getCategoryForType(tipo) {
+  if (!tipo) return 'serramento';
+  const ferro = ['Cancello battente', 'Cancello scorrevole', 'Grata/Inferriata', 'Porta in ferro', 'Ringhiera/Parapetto', 'Copertura/Tettoia', 'Lattoneria'];
+  const varie = ['Altro', 'Carter', 'Elementi particolari', 'Riparazioni', 'Zanzariera', 'Tapparella', 'Cassonetto', 'Serranda', 'Tenda da sole', 'Mobile/Copricaldaia', 'Controtelaio'];
+  if (ferro.includes(tipo)) return 'ferro_esterno';
+  if (varie.includes(tipo)) return 'varie';
+  return 'serramento';
+}
 
 /* ---------- STATO ---------- */
 let state=normalize(load())||newRilievo();
@@ -574,22 +584,51 @@ function renderItems(){
       <div class="grid g2">
         ${field(it,i,'pos','Posizione (locale)','dl',1)}
         ${field(it,i,'tipologia','Tipologia','dl',1)}</div>
+      
       <div class="grid meas g3" style="margin-top:10px">
-        <div><label>L (mm) <span class="req">*</span></label><input data-f="L" data-i="${i}" value="${esc(it.L)}" inputmode="numeric"></div>
-        <div><label>H (mm) <span class="req">*</span></label><input data-f="H" data-i="${i}" value="${esc(it.H)}" inputmode="numeric"></div>
+        <div><label>L (mm) ${getCategoryForType(it.tipologia) === 'varie' ? '<span style="font-weight:400;color:var(--muted)">(facoltativo)</span>' : '<span class="req">*</span>'}</label><input data-f="L" data-i="${i}" value="${esc(it.L)}" inputmode="numeric"></div>
+        <div><label>H (mm) ${getCategoryForType(it.tipologia) === 'varie' ? '<span style="font-weight:400;color:var(--muted)">(facoltativo)</span>' : '<span class="req">*</span>'}</label><input data-f="H" data-i="${i}" value="${esc(it.H)}" inputmode="numeric"></div>
         <div><label>PZ <span class="req">*</span></label><input data-f="PZ" data-i="${i}" value="${esc(it.PZ)}" inputmode="numeric"></div></div>
-      <div class="grid g2" style="margin-top:10px">
-        ${field(it,i,'serie','Serie / Materiale','dl',1)}
-        ${field(it,i,'colore','Colore','dl',1)}
-        ${field(it,i,'vetri','Vetri','dl',1)}
-        ${field(it,i,'telaio','Telaio','dl',1)}
-        ${field(it,i,'apertura','Apertura','dl',1)}
-        <div><label>H maniglia <span class="req">*</span></label><input data-f="hmaniglia" data-i="${i}" value="${esc(it.hmaniglia)}" placeholder="cm da terra"></div></div>
-      <div class="grid g2" style="margin-top:10px">
-        <div><label>Cassonetto <span class="req">*</span></label>
-          <select data-f="cassonetto" data-i="${i}"><option value="no"${casOn?'':' selected'}>No</option><option value="si"${casOn?' selected':''}>Sì</option></select></div></div>
-      ${casOn?casBlock(it,i):''}
-      <div style="margin-top:10px"><label>Nota</label>
+      
+      ${(() => {
+        const cat = getCategoryForType(it.tipologia);
+        if (cat === 'serramento') {
+          return `
+            <div class="grid g2" style="margin-top:10px">
+              ${field(it,i,'serie','Serie / Materiale','dl',1)}
+              ${field(it,i,'colore','Colore','dl',1)}
+              ${field(it,i,'vetri','Vetri','dl',1)}
+              ${field(it,i,'telaio','Telaio','dl',1)}
+              ${field(it,i,'apertura','Apertura','dl',1)}
+              <div><label>H maniglia <span class="req">*</span></label><input data-f="hmaniglia" data-i="${i}" value="${esc(it.hmaniglia)}" placeholder="cm da terra"></div>
+            </div>
+            <div class="grid g2" style="margin-top:10px">
+              <div><label>Cassonetto <span class="req">*</span></label>
+                <select data-f="cassonetto" data-i="${i}"><option value="no"${casOn?'':' selected'}>No</option><option value="si"${casOn?' selected':''}>Sì</option></select></div>
+            </div>
+            ${casOn?casBlock(it,i):''}
+          `;
+        } else if (cat === 'ferro_esterno') {
+          const showApertura = ['Cancello battente', 'Cancello scorrevole', 'Grata/Inferriata', 'Porta in ferro'].includes(it.tipologia);
+          return `
+            <div class="grid g2" style="margin-top:10px">
+              ${field(it,i,'serie','Serie / Materiale','dl',1)}
+              ${field(it,i,'colore','Colore','dl',1)}
+              ${showApertura ? field(it,i,'apertura','Apertura','dl',0) : ''}
+            </div>
+          `;
+        } else {
+          // varie / riparazioni
+          return `
+            <div class="grid g2" style="margin-top:10px">
+              ${field(it,i,'serie','Serie / Materiale (facoltativo)','dl',0)}
+              ${field(it,i,'colore','Colore (facoltativo)','dl',0)}
+            </div>
+          `;
+        }
+      })()}
+      
+      <div style="margin-top:10px"><label>Nota ${getCategoryForType(it.tipologia) === 'varie' ? '<span class="req">*</span>' : ''}</label>
         <textarea data-f="nota" data-i="${i}" placeholder="Annotazioni per produzione/montaggio…">${esc(it.nota)}</textarea></div>
       <div class="medialabel">✏️ Disegno della posizione <span class="req">*</span></div>
       <div class="thumbs">${mediaThumb(it.disegno,'disegno',i)}</div>
@@ -625,13 +664,28 @@ function updateSummary(){const pz=state.items.reduce((s,it)=>s+(parseInt(it.PZ)|
 document.addEventListener('input',e=>{
   const t=e.target;
   if(t.dataset.f!==undefined&&t.dataset.i!==undefined){state.items[t.dataset.i][t.dataset.f]=t.value;
-    t.classList.remove('missing');if(t.dataset.f==='PZ')updateSummary();save();}
+    t.classList.remove('missing');
+    if(t.dataset.f==='PZ')updateSummary();
+    if(t.dataset.f==='tipologia'){
+      if(OPZIONI.tipologia.includes(t.value)){
+        renderItems();
+        const inputToFocus = document.querySelector(`[data-f="tipologia"][data-i="${t.dataset.i}"]`);
+        if(inputToFocus){
+          inputToFocus.focus();
+          const val = inputToFocus.value;
+          inputToFocus.value = '';
+          inputToFocus.value = val;
+        }
+      }
+    }
+    save();}
   else if(t.dataset.cf!==undefined){state.items[t.dataset.i].cas[t.dataset.cf]=t.value;t.classList.remove('missing');save();}
 });
 document.addEventListener('change',e=>{ // cassonetto sì/no + tipo select
   const t=e.target;
   if(t.dataset.f==='cassonetto'){state.items[t.dataset.i].cassonetto=t.value;save();renderItems();}
   else if(t.dataset.cf==='tipo'){state.items[t.dataset.i].cas.tipo=t.value;save();}
+  else if(t.dataset.f==='tipologia'){save();renderItems();}
 });
 ['c_cliente','c_tel','c_via','c_data','c_rilevatore','c_email','c_citofono','c_referente','c_via_cantiere'].forEach(id=>{
   document.getElementById(id).addEventListener('input',e=>{
@@ -1252,15 +1306,30 @@ function validate(){
   if(state.cantiereDiverso){reqH.push(['c_via_cantiere','Indirizzo Cantiere']);}
   reqH.forEach(([id,lab])=>{const el=document.getElementById(id);if(!el.value.trim()){el.classList.add('missing');miss.push(lab);firstEl=firstEl||el;}});
   if(state.destType==='commessa'&&!state.destCommessa.trim()){d_commessa.classList.add('missing');miss.push('Commessa');firstEl=firstEl||d_commessa;}
-  const reqI=['pos','tipologia','L','H','PZ','serie','colore','vetri','telaio','apertura','hmaniglia'];
   const warnings=[];
   state.items.forEach((it,i)=>{
     if(it._confirm===false)miss.push('Pos.'+(i+1)+': confermare posizione duplicata');
+    const cat = getCategoryForType(it.tipologia);
+    let reqI = ['pos','tipologia','PZ'];
+    if(cat === 'serramento') {
+      reqI = reqI.concat(['L','H','serie','colore','vetri','telaio','apertura','hmaniglia']);
+    } else if(cat === 'ferro_esterno') {
+      reqI = reqI.concat(['L','H','serie','colore']);
+    } else {
+      // varie
+      if(!it.nota.trim()){
+        const el = document.querySelector('[data-f="nota"][data-i="'+i+'"]');
+        if(el)el.classList.add('missing');
+        miss.push('Pos.'+(i+1)+': inserisci una descrizione nella Nota');
+        firstEl=firstEl||el;
+      }
+    }
     reqI.forEach(f=>{if(!String(it[f]).trim()){const el=document.querySelector('[data-f="'+f+'"][data-i="'+i+'"]');
       if(el)el.classList.add('missing');miss.push('Pos.'+(i+1)+': '+f);firstEl=firstEl||el;}});
+    
     if(!it.disegno||!it.disegno.img)warnings.push('Pos.'+(i+1)+': manca il disegno');
     if(!it.foto.length)miss.push('Pos.'+(i+1)+': almeno 1 foto');
-    if(it.cassonetto==='si'){['L','H','P','tipo'].forEach(f=>{if(!String(it.cas[f]).trim()){
+    if(cat === 'serramento' && it.cassonetto==='si'){['L','H','P','tipo'].forEach(f=>{if(!String(it.cas[f]).trim()){
       const el=document.querySelector('[data-cf="'+f+'"][data-i="'+i+'"]');if(el)el.classList.add('missing');
       miss.push('Pos.'+(i+1)+' cassonetto: '+f);firstEl=firstEl||el;}});}
   });
@@ -1292,11 +1361,29 @@ function buildReportInner(){
     return `<table class="pblock"><tr>
       <td class="plabels">
         <div><b>Pos. ${i+1}:</b> ${esc(it.pos)||'&nbsp;'}</div>
-        <div>Tipologia: ${esc(it.tipologia)}</div><div>Serie: ${esc(it.serie)}</div>
-        <div>Colore: ${esc(it.colore)}</div><div>Vetri: ${esc(it.vetri)}</div>
-        <div>Telaio: ${esc(it.telaio)}</div><div>Apertura: ${esc(it.apertura)}</div>
-        <div>H maniglia: ${esc(it.hmaniglia)}</div>
-        <div>Cassonetto: ${it.cassonetto==='si'?'Sì':'No'}</div></td>
+        <div>Tipologia: ${esc(it.tipologia)}</div>
+        ${(() => {
+          const cat = getCategoryForType(it.tipologia);
+          if (cat === 'serramento') {
+            return `
+              <div>Serie: ${esc(it.serie)}</div><div>Colore: ${esc(it.colore)}</div>
+              <div>Vetri: ${esc(it.vetri)}</div><div>Telaio: ${esc(it.telaio)}</div>
+              <div>Apertura: ${esc(it.apertura)}</div><div>H maniglia: ${esc(it.hmaniglia)}</div>
+              <div>Cassonetto: ${it.cassonetto==='si'?'Sì':'No'}</div>
+            `;
+          } else if (cat === 'ferro_esterno') {
+            const showApertura = ['Cancello battente', 'Cancello scorrevole', 'Grata/Inferriata', 'Porta in ferro'].includes(it.tipologia);
+            return `
+              <div>Serie: ${esc(it.serie)}</div><div>Colore: ${esc(it.colore)}</div>
+              ${showApertura ? '<div>Apertura: ' + esc(it.apertura) + '</div>' : ''}
+            `;
+          } else {
+            return `
+              ${it.serie ? '<div>Serie: ' + esc(it.serie) + '</div>' : ''}
+              ${it.colore ? '<div>Colore: ' + esc(it.colore) + '</div>' : ''}
+            `;
+          }
+        })()}</td>
       <td class="pmain">
         <div class="pmeas"><span>L <b>${esc(it.L)}</b></span><span>H <b>${esc(it.H)}</b></span><span>PZ <b>${esc(it.PZ)}</b></span></div>
         <div class="pmedia">${imgs}</div>${cas}
@@ -1488,12 +1575,32 @@ async function buildPdfBlob(){
     doc.setFontSize(9.5);doc.text('L '+it.L+'  H '+it.H+'  PZ '+it.PZ,PW-M-2,y+5,{align:'right'});
     y+=9;
     doc.setTextColor(40);F('normal');doc.setFontSize(8.5);
-    const specs=[['Serie',it.serie],['Colore',it.colore],['Vetri',it.vetri],['Telaio',it.telaio],
-      ['Apertura',it.apertura],['H maniglia',it.hmaniglia]];
-    const rows=Math.ceil(specs.length/2);ensure(rows*4.6+2);
-    for(let k=0;k<specs.length;k++){const col=k%2,row=Math.floor(k/2);const xx=M+col*(W/2);const ry=y+row*4.6+3;
-      F('bold');doc.text(specs[k][0]+':',xx,ry);F('normal');doc.text(String(specs[k][1]||'-'),xx+22,ry);}
-    y+=rows*4.6+3;
+    const cat = getCategoryForType(it.tipologia);
+    let specs = [];
+    if (cat === 'serramento') {
+      specs = [['Serie',it.serie],['Colore',it.colore],['Vetri',it.vetri],['Telaio',it.telaio],
+        ['Apertura',it.apertura],['H maniglia',it.hmaniglia]];
+    } else if (cat === 'ferro_esterno') {
+      const showApertura = ['Cancello battente', 'Cancello scorrevole', 'Grata/Inferriata', 'Porta in ferro'].includes(it.tipologia);
+      specs = [['Serie',it.serie],['Colore',it.colore]];
+      if (showApertura) specs.push(['Apertura',it.apertura]);
+    } else {
+      if (it.serie) specs.push(['Serie',it.serie]);
+      if (it.colore) specs.push(['Colore',it.colore]);
+    }
+    
+    const rows=Math.ceil(specs.length/2);
+    if (rows > 0) {
+      ensure(rows*4.6+2);
+      for(let k=0;k<specs.length;k++){
+        const col=k%2,row=Math.floor(k/2);
+        const xx=M+col*(W/2);
+        const ry=y+row*4.6+3;
+        F('bold');doc.text(specs[k][0]+':',xx,ry);
+        F('normal');doc.text(String(specs[k][1]||'-'),xx+22,ry);
+      }
+      y+=rows*4.6+3;
+    }
     if(it.cassonetto==='si'){ensure(7);F('bold');doc.setTextColor(26,79,156);
       const ct='Cassonetto '+(it.cas.tipo||'')+': '+it.cas.L+'×'+it.cas.H+'×'+it.cas.P+' mm'+(it.cas.note?' — '+it.cas.note:'');
       doc.text(doc.splitTextToSize(ct,W),M,y+3);doc.setTextColor(40);F('normal');y+=6;}
