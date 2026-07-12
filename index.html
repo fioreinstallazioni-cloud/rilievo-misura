@@ -215,6 +215,7 @@
         <div class="segmented-control">
           <button class="seg-btn active" id="btn_privato" type="button">Privato</button>
           <button class="seg-btn" id="btn_azienda" type="button">Azienda</button>
+          <button class="seg-btn" id="btn_rivenditore" type="button">Rivenditore</button>
         </div>
       </div>
       <div id="referente_wrap" style="display:none">
@@ -505,10 +506,24 @@ function renderHeader(){
   c_via.value=state.via;
   c_citofono.value=state.citofono||'';
   
-  const isAzienda = state.tipoCliente === 'azienda';
-  document.getElementById('btn_privato').classList.toggle('active', !isAzienda);
-  document.getElementById('btn_azienda').classList.toggle('active', isAzienda);
-  document.getElementById('referente_wrap').style.display = isAzienda ? 'block' : 'none';
+  const tc = state.tipoCliente || 'privato';
+  document.getElementById('btn_privato').classList.toggle('active', tc === 'privato');
+  document.getElementById('btn_azienda').classList.toggle('active', tc === 'azienda');
+  document.getElementById('btn_rivenditore').classList.toggle('active', tc === 'rivenditore');
+  
+  const refWrap = document.getElementById('referente_wrap');
+  const refLabel = refWrap.querySelector('label');
+  if (tc === 'azienda') {
+    refWrap.style.display = 'block';
+    refLabel.textContent = 'Referente / Contatto';
+    c_referente.placeholder = 'Es. referente ditta';
+  } else if (tc === 'rivenditore') {
+    refWrap.style.display = 'block';
+    refLabel.textContent = 'Riferimento Cliente Finale';
+    c_referente.placeholder = 'Es. nome cliente del rivenditore';
+  } else {
+    refWrap.style.display = 'none';
+  }
   c_referente.value = state.referente || '';
   
   c_cantiere_diverso.checked = !!state.cantiereDiverso;
@@ -640,18 +655,40 @@ document.getElementById('c_cantiere_diverso').addEventListener('change',e=>{
 });
 document.getElementById('btn_privato').onclick = () => {
   state.tipoCliente = 'privato';
-  document.getElementById('btn_privato').classList.add('active');
-  document.getElementById('btn_azienda').classList.remove('active');
-  document.getElementById('referente_wrap').style.display = 'none';
+  updateTipoClienteUI();
   save();
 };
 document.getElementById('btn_azienda').onclick = () => {
   state.tipoCliente = 'azienda';
-  document.getElementById('btn_privato').classList.remove('active');
-  document.getElementById('btn_azienda').classList.add('active');
-  document.getElementById('referente_wrap').style.display = 'block';
+  updateTipoClienteUI();
   save();
 };
+document.getElementById('btn_rivenditore').onclick = () => {
+  state.tipoCliente = 'rivenditore';
+  updateTipoClienteUI();
+  save();
+};
+
+function updateTipoClienteUI() {
+  const tc = state.tipoCliente;
+  document.getElementById('btn_privato').classList.toggle('active', tc === 'privato');
+  document.getElementById('btn_azienda').classList.toggle('active', tc === 'azienda');
+  document.getElementById('btn_rivenditore').classList.toggle('active', tc === 'rivenditore');
+  
+  const refWrap = document.getElementById('referente_wrap');
+  const refLabel = refWrap.querySelector('label');
+  if (tc === 'azienda') {
+    refWrap.style.display = 'block';
+    refLabel.textContent = 'Referente / Contatto';
+    c_referente.placeholder = 'Es. referente ditta';
+  } else if (tc === 'rivenditore') {
+    refWrap.style.display = 'block';
+    refLabel.textContent = 'Riferimento Cliente Finale';
+    c_referente.placeholder = 'Es. nome cliente del rivenditore';
+  } else {
+    refWrap.style.display = 'none';
+  }
+}
 ['c_wa','c_tg'].forEach(id=>{
   document.getElementById(id).addEventListener('change',e=>{
     const map={c_wa:'wa',c_tg:'tg'};
@@ -843,10 +880,24 @@ function fillClientFromContact(c) {
     document.getElementById('gpsCantiereHint').innerHTML = '';
   }
   
-  const isAzienda = state.tipoCliente === 'azienda';
-  document.getElementById('btn_privato').classList.toggle('active', !isAzienda);
-  document.getElementById('btn_azienda').classList.toggle('active', isAzienda);
-  document.getElementById('referente_wrap').style.display = isAzienda ? 'block' : 'none';
+  const tc = state.tipoCliente || 'privato';
+  document.getElementById('btn_privato').classList.toggle('active', tc === 'privato');
+  document.getElementById('btn_azienda').classList.toggle('active', tc === 'azienda');
+  document.getElementById('btn_rivenditore').classList.toggle('active', tc === 'rivenditore');
+  
+  const refWrap = document.getElementById('referente_wrap');
+  const refLabel = refWrap.querySelector('label');
+  if (tc === 'azienda') {
+    refWrap.style.display = 'block';
+    refLabel.textContent = 'Referente / Contatto';
+    c_referente.placeholder = 'Es. referente ditta';
+  } else if (tc === 'rivenditore') {
+    refWrap.style.display = 'block';
+    refLabel.textContent = 'Riferimento Cliente Finale';
+    c_referente.placeholder = 'Es. nome cliente del rivenditore';
+  } else {
+    refWrap.style.display = 'none';
+  }
   c_vianote.value = state.vianote;
   
   [c_cliente, c_tel, c_via].forEach(el => el.classList.remove('missing'));
@@ -934,8 +985,8 @@ function renderRubricaItems(query = '') {
     if (c.wa) channels.push('WA');
     if (c.tg) channels.push('TG');
     const chanStr = channels.length ? ' (' + channels.join('/') + ')' : '';
-    const refStr = c.referente ? ` (Ref: ${esc(c.referente)})` : '';
-    const typeStr = c.tipoCliente === 'azienda' ? ' [Azienda]' : '';
+    const refStr = c.referente ? (c.tipoCliente === 'rivenditore' ? ` (Cliente Finale: ${esc(c.referente)})` : ` (Ref: ${esc(c.referente)})`) : '';
+    const typeStr = c.tipoCliente === 'azienda' ? ' [Azienda]' : (c.tipoCliente === 'rivenditore' ? ' [Rivenditore]' : '');
     
     el.innerHTML = `
       <div class="rub-info">
@@ -1266,8 +1317,13 @@ function buildReportInner(){
     <table class="ci">
       <tr><td><b>Cliente:</b> ${esc(state.cliente)}${(() => {
         let details = [];
-        if (state.tipoCliente === 'azienda') details.push('Azienda');
-        if (state.referente) details.push('Ref: ' + state.referente);
+        if (state.tipoCliente === 'azienda') {
+          details.push('Azienda');
+          if (state.referente) details.push('Ref: ' + state.referente);
+        } else if (state.tipoCliente === 'rivenditore') {
+          details.push('Rivenditore');
+          if (state.referente) details.push('Cliente Finale: ' + state.referente);
+        }
         return details.length ? ' [' + details.join(' - ') + ']' : '';
       })()}</td><td><b>Tel:</b> ${esc(state.tel)}${(() => {
         let channels = [];
@@ -1367,6 +1423,9 @@ async function buildPdfBlob(){
   if (state.tipoCliente === 'azienda') {
     clientLabel += ' [Azienda]';
     if (state.referente) clientLabel += ' (Ref: ' + state.referente + ')';
+  } else if (state.tipoCliente === 'rivenditore') {
+    clientLabel += ' [Rivenditore]';
+    if (state.referente) clientLabel += ' (Cliente Finale: ' + state.referente + ')';
   }
   
   kv('Cliente:', clientLabel, M, y);
