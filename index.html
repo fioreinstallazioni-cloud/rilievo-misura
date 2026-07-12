@@ -151,6 +151,13 @@
   .flags{display:flex;gap:12px;margin-top:6px}
   .flags label.chk{display:inline-flex;align-items:center;gap:4px;font-size:14px;font-weight:normal;color:var(--ink);cursor:pointer}
   .flags input[type=checkbox]{width:18px;height:18px;margin:0}
+  
+  /* Stili Segmented Control Privato/Azienda */
+  .segmented-control{display:flex;background:var(--df-light);border-radius:10px;padding:3px;border:1px solid var(--line)}
+  .seg-btn{flex:1;border:none;background:none;font-size:14px;font-weight:700;padding:8px;border-radius:8px;cursor:pointer;color:var(--muted);transition:all .2s}
+  .seg-btn.active{background:#fff;color:var(--df-blue);box-shadow:0 2px 6px rgba(0,0,0,0.08)}
+  
+
 
   /* Modale Mappa (Leaflet) */
   .mapmodal{position:fixed;inset:0;z-index:130;background:rgba(0,0,0,.55);display:none;flex-direction:column;padding:0}
@@ -188,6 +195,19 @@
   <!-- CLIENTE -->
   <div class="card">
     <h2>👤 Cliente</h2>
+    <div class="grid g2" style="margin-bottom:10px">
+      <div>
+        <label>Tipo Cliente <span class="req">*</span></label>
+        <div class="segmented-control">
+          <button class="seg-btn active" id="btn_privato" type="button">Privato</button>
+          <button class="seg-btn" id="btn_azienda" type="button">Azienda</button>
+        </div>
+      </div>
+      <div id="referente_wrap" style="display:none">
+        <label>Referente / Contatto</label>
+        <input id="c_referente" placeholder="Es. referente ditta">
+      </div>
+    </div>
     <div class="grid g2">
       <div class="sugg">
         <label>Cliente / Cantiere <span class="req">*</span></label>
@@ -219,12 +239,8 @@
       </div>
     </div>
     <div class="grid" style="margin-top:10px">
-      <div><label>🔔 Citofono</label>
-        <textarea id="c_citofono" placeholder="Es. suonare 'Rossi' · per aprire il portone premere 3 · citofono senza nome: citofonare al vicino Bianchi"></textarea></div>
-    </div>
-    <div class="grid" style="margin-top:10px">
-      <div><label>Note indirizzo / contatto</label>
-        <textarea id="c_vianote" placeholder="Es. assenza ascensore · parcheggio interno · chiamare all'arrivo"></textarea></div>
+      <div><label>🔔 Citofono / Note indirizzo / contatto</label>
+        <textarea id="c_citofono" placeholder="Es. suonare 'Rossi' · citofonare al vicino Bianchi · parcheggio interno · scala B · chiamare all'arrivo"></textarea></div>
     </div>
     <div class="grid g2" style="margin-top:10px">
       <div><label>Data rilievo <span class="req">*</span></label><input id="c_data" type="date"></div>
@@ -243,7 +259,10 @@
         </select>
       </div>
       <div id="d_commessa_wrap" style="display:none"><label>Commessa esistente <span class="req">*</span></label>
-        <input id="d_commessa" placeholder="Es. C31-Arianna Nocerino" list="dl_commesse"></div>
+        <div class="input-with-arrow">
+          <input id="d_commessa" placeholder="Es. C31-Arianna Nocerino" list="dl_commesse">
+          <span class="dropdown-arrow">▼</span>
+        </div></div>
     </div>
     <div class="pathline" id="d_path"></div>
   </div>
@@ -419,7 +438,7 @@ function arrow(ctx,x1,y1,x2,y2){ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,
 
 /* ---------- STATO ---------- */
 let state=normalize(load())||newRilievo();
-function newRilievo(){return{cliente:'',tel:'',email:'',wa:false,tg:false,via:'',citofono:'',vianote:'',lat:null,lng:null,
+function newRilievo(){return{cliente:'',tel:'',email:'',wa:false,tg:false,via:'',citofono:'',tipoCliente:'privato',referente:'',lat:null,lng:null,
   data:todayISO(),rilevatore:'',destType:'lead',destCommessa:'',items:[blankItem()]};}
 function blankItem(){return{pos:'',tipologia:'',serie:'',colore:'',vetri:'',telaio:'',apertura:'',
   hmaniglia:'',L:'',H:'',PZ:'1',nota:'',cassonetto:'no',_confirm:true,
@@ -431,6 +450,8 @@ function normalize(s){if(!s)return s;
   if(s.wa===undefined)s.wa=false;
   if(s.tg===undefined)s.tg=false;
   if(s.citofono===undefined)s.citofono='';
+  if(s.tipoCliente===undefined)s.tipoCliente='privato';
+  if(s.referente===undefined)s.referente='';
   (s.items||[]).forEach(it=>{
   if(!Array.isArray(it.foto))it.foto=it.foto?[it.foto]:[];
   if(it._confirm===undefined)it._confirm=true;
@@ -447,7 +468,14 @@ function renderHeader(){
   c_tg.checked=!!state.tg;
   c_via.value=state.via;
   c_citofono.value=state.citofono||'';
-  c_vianote.value=state.vianote||'';c_data.value=state.data||todayISO();
+  
+  const isAzienda = state.tipoCliente === 'azienda';
+  document.getElementById('btn_privato').classList.toggle('active', !isAzienda);
+  document.getElementById('btn_azienda').classList.toggle('active', isAzienda);
+  document.getElementById('referente_wrap').style.display = isAzienda ? 'block' : 'none';
+  c_referente.value = state.referente || '';
+  
+  c_data.value=state.data||todayISO();
   c_rilevatore.value=state.rilevatore;d_type.value=state.destType||'lead';d_commessa.value=state.destCommessa||'';
   if(!document.getElementById('dl_commesse')){const d=document.createElement('div');
     d.innerHTML='<datalist id="dl_commesse">'+COMMESSE.map(c=>'<option value="'+esc(c)+'">').join('')+'</datalist>';
@@ -463,8 +491,12 @@ function renderDestPath(){document.getElementById('d_commessa_wrap').style.displ
 
 /* ---------- ITEMS ---------- */
 function dlOpts(arr){return arr.map(o=>'<option value="'+esc(o)+'">').join('');}
-function field(it,i,f,label,list,req){return '<div><label>'+label+(req?' <span class="req">*</span>':'')+
-  '</label><input data-f="'+f+'" data-i="'+i+'" value="'+esc(it[f])+'"'+(list?' list="dl_'+f+'"':'')+'></div>';}
+function field(it,i,f,label,list,req){
+  const inputHtml = '<input data-f="'+f+'" data-i="'+i+'" value="'+esc(it[f])+'"'+(list?' list="dl_'+f+'"':'')+'>';
+  const arrowHtml = list ? '<span class="dropdown-arrow">▼</span>' : '';
+  const wrappedInput = list ? '<div class="input-with-arrow">'+inputHtml+arrowHtml+'</div>' : inputHtml;
+  return '<div><label>'+label+(req?' <span class="req">*</span>':'')+'</label>'+wrappedInput+'</div>';
+}
 function renderItems(){
   const box=document.getElementById('items');box.innerHTML='';
   if(!document.getElementById('dl_tipologia')){const d=document.createElement('div');d.id='dls';
@@ -541,9 +573,9 @@ document.addEventListener('change',e=>{ // cassonetto sì/no + tipo select
   if(t.dataset.f==='cassonetto'){state.items[t.dataset.i].cassonetto=t.value;save();renderItems();}
   else if(t.dataset.cf==='tipo'){state.items[t.dataset.i].cas.tipo=t.value;save();}
 });
-['c_cliente','c_tel','c_via','c_vianote','c_data','c_rilevatore','c_email','c_citofono'].forEach(id=>{
+['c_cliente','c_tel','c_via','c_data','c_rilevatore','c_email','c_citofono','c_referente'].forEach(id=>{
   document.getElementById(id).addEventListener('input',e=>{
-    const map={c_cliente:'cliente',c_tel:'tel',c_via:'via',c_vianote:'vianote',c_data:'data',c_rilevatore:'rilevatore',c_email:'email',c_citofono:'citofono'};
+    const map={c_cliente:'cliente',c_tel:'tel',c_via:'via',c_data:'data',c_rilevatore:'rilevatore',c_email:'email',c_citofono:'citofono',c_referente:'referente'};
     state[map[id]]=e.target.value;e.target.classList.remove('missing');
     if(id==='c_cliente') {
       renderDestPath();
@@ -556,6 +588,20 @@ document.addEventListener('change',e=>{ // cassonetto sì/no + tipo select
     save();
   });
 });
+document.getElementById('btn_privato').onclick = () => {
+  state.tipoCliente = 'privato';
+  document.getElementById('btn_privato').classList.add('active');
+  document.getElementById('btn_azienda').classList.remove('active');
+  document.getElementById('referente_wrap').style.display = 'none';
+  save();
+};
+document.getElementById('btn_azienda').onclick = () => {
+  state.tipoCliente = 'azienda';
+  document.getElementById('btn_privato').classList.remove('active');
+  document.getElementById('btn_azienda').classList.add('active');
+  document.getElementById('referente_wrap').style.display = 'block';
+  save();
+};
 ['c_wa','c_tg'].forEach(id=>{
   document.getElementById(id).addEventListener('change',e=>{
     const map={c_wa:'wa',c_tg:'tg'};
@@ -720,7 +766,8 @@ function fillClientFromContact(c) {
   state.tg = !!c.tg;
   state.via = c.via || '';
   state.citofono = c.citofono || '';
-  state.vianote = c.vianote || '';
+  state.tipoCliente = c.tipoCliente || 'privato';
+  state.referente = c.referente || '';
   if (c.lat !== undefined) state.lat = c.lat;
   if (c.lng !== undefined) state.lng = c.lng;
   
@@ -731,6 +778,12 @@ function fillClientFromContact(c) {
   c_tg.checked = state.tg;
   c_via.value = state.via;
   c_citofono.value = state.citofono;
+  c_referente.value = state.referente;
+  
+  const isAzienda = state.tipoCliente === 'azienda';
+  document.getElementById('btn_privato').classList.toggle('active', !isAzienda);
+  document.getElementById('btn_azienda').classList.toggle('active', isAzienda);
+  document.getElementById('referente_wrap').style.display = isAzienda ? 'block' : 'none';
   c_vianote.value = state.vianote;
   
   [c_cliente, c_tel, c_via].forEach(el => el.classList.remove('missing'));
@@ -751,7 +804,8 @@ function saveCurrentToRubrica() {
     tg: state.tg,
     via: state.via,
     citofono: state.citofono,
-    vianote: state.vianote,
+    tipoCliente: state.tipoCliente,
+    referente: state.referente,
     lat: state.lat,
     lng: state.lng
   };
@@ -813,12 +867,14 @@ function renderRubricaItems(query = '') {
     if (c.wa) channels.push('WA');
     if (c.tg) channels.push('TG');
     const chanStr = channels.length ? ' (' + channels.join('/') + ')' : '';
+    const refStr = c.referente ? ` (Ref: ${esc(c.referente)})` : '';
+    const typeStr = c.tipoCliente === 'azienda' ? ' [Azienda]' : '';
     
     el.innerHTML = `
       <div class="rub-info">
-        <div class="rub-name">${esc(c.nome)}</div>
+        <div class="rub-name">${esc(c.nome)}${typeStr}</div>
         <div class="rub-details">
-          ${c.tel ? '📞 ' + esc(c.tel) + chanStr : ''} 
+          ${c.tel ? '📞 ' + esc(c.tel) + chanStr : ''} ${refStr}
           ${c.email ? ' · ✉️ ' + esc(c.email) : ''}
           ${c.via ? '<br>📍 ' + esc(c.via) : ''}
         </div>
@@ -1098,7 +1154,12 @@ function buildReportInner(){
     <div class="head"><div><div class="logo">DF</div> <span class="t">Scheda Rilievi</span></div>
       <div style="text-align:right;font-size:11px">Fiore Installazioni s.r.l.s.<br>Rilievo del ${fmtDate(state.data)}</div></div>
     <table class="ci">
-      <tr><td><b>Cliente:</b> ${esc(state.cliente)}</td><td><b>Tel:</b> ${esc(state.tel)}${(() => {
+      <tr><td><b>Cliente:</b> ${esc(state.cliente)}${(() => {
+        let details = [];
+        if (state.tipoCliente === 'azienda') details.push('Azienda');
+        if (state.referente) details.push('Ref: ' + state.referente);
+        return details.length ? ' [' + details.join(' - ') + ']' : '';
+      })()}</td><td><b>Tel:</b> ${esc(state.tel)}${(() => {
         let channels = [];
         if (state.wa) channels.push('WhatsApp');
         if (state.tg) channels.push('Telegram');
@@ -1106,8 +1167,7 @@ function buildReportInner(){
       })()}</td></tr>
       ${state.email ? '<tr><td colspan="2"><b>Email:</b> ' + esc(state.email) + '</td></tr>' : ''}
       <tr><td colspan="2"><b>Indirizzo:</b> ${esc(state.via)}</td></tr>
-      ${state.citofono ? '<tr><td colspan="2"><b>Citofono:</b> ' + esc(state.citofono) + '</td></tr>' : ''}
-      ${state.vianote?'<tr><td colspan="2"><b>Note:</b> '+esc(state.vianote)+'</td></tr>':''}
+      ${state.citofono ? '<tr><td colspan="2"><b>Citofono/Note:</b> ' + esc(state.citofono) + '</td></tr>' : ''}
       <tr><td><b>Rilevatore:</b> ${esc(state.rilevatore)}</td><td><b>Cartella:</b> ${esc(destPath())}/</td></tr>
     </table>
     ${rows}
@@ -1192,7 +1252,13 @@ async function buildPdfBlob(){
   if (state.tg) channels.push('TG');
   const chanStr = channels.length ? ' (' + channels.join('/') + ')' : '';
   
-  kv('Cliente:', state.cliente, M, y);
+  let clientLabel = state.cliente;
+  if (state.tipoCliente === 'azienda') {
+    clientLabel += ' [Azienda]';
+    if (state.referente) clientLabel += ' (Ref: ' + state.referente + ')';
+  }
+  
+  kv('Cliente:', clientLabel, M, y);
   kv('Tel:', (state.tel || '') + chanStr, M+110, y);
   y += 5;
   
@@ -1213,20 +1279,10 @@ async function buildPdfBlob(){
   
   if (state.citofono) {
     const citoLines = doc.splitTextToSize(state.citofono, W - 20);
-    kv('Citofono:', citoLines[0], M, y);
+    kv('Citofono/Note:', citoLines[0], M, y);
     for (let i = 1; i < citoLines.length; i++) {
       y += 4.5;
       doc.text(citoLines[i], M + 18, y);
-    }
-    y += 5;
-  }
-  
-  if (state.vianote) {
-    const noteLines = doc.splitTextToSize(state.vianote, W - 20);
-    kv('Note:', noteLines[0], M, y);
-    for (let i = 1; i < noteLines.length; i++) {
-      y += 4.5;
-      doc.text(noteLines[i], M + 12, y);
     }
     y += 5;
   }
