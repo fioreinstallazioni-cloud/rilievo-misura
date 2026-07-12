@@ -157,6 +157,20 @@
   .seg-btn{flex:1;border:none;background:none;font-size:14px;font-weight:700;padding:8px;border-radius:8px;cursor:pointer;color:var(--muted);transition:all .2s}
   .seg-btn.active{background:#fff;color:var(--df-blue);box-shadow:0 2px 6px rgba(0,0,0,0.08)}
   
+  /* Arrow indicator per i menu a tendina */
+  .input-with-arrow { position: relative; display: block; }
+  .input-with-arrow input { padding-right: 30px !important; }
+  .input-with-arrow .dropdown-arrow {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 10px;
+    color: var(--muted);
+    pointer-events: none;
+    z-index: 10;
+  }
+  
 
 
   /* Modale Mappa (Leaflet) */
