@@ -243,13 +243,30 @@
     </div>
     <div class="grid" style="margin-top:10px">
       <div class="sugg">
-        <label>Indirizzo <span class="req">*</span></label>
+        <label>Indirizzo Cliente <span class="req">*</span></label>
         <div style="display:flex;gap:8px">
           <input id="c_via" placeholder="Via, città, CAP…" autocomplete="off" style="flex:1">
           <button class="minibtn" id="gpsBtn" title="Posizione su mappa">📍 Mappa</button>
         </div>
         <div class="sugglist" id="viaSugg" style="display:none"></div>
         <div class="hint" id="gpsHint"></div>
+      </div>
+    </div>
+    <div class="grid" style="margin-top:10px">
+      <label class="chk" style="display:inline-flex;align-items:center;gap:4px;font-weight:normal;cursor:pointer">
+        <input type="checkbox" id="c_cantiere_diverso" style="width:18px;height:18px;margin:0">
+        🚧 Indirizzo cantiere diverso da indirizzo cliente
+      </label>
+    </div>
+    <div class="grid" id="cantiere_via_wrap" style="margin-top:10px;display:none">
+      <div class="sugg">
+        <label>Indirizzo Cantiere <span class="req">*</span></label>
+        <div style="display:flex;gap:8px">
+          <input id="c_via_cantiere" placeholder="Via, città, CAP del cantiere…" autocomplete="off" style="flex:1">
+          <button class="minibtn" id="gpsCantiereBtn" title="Posizione cantiere su mappa">📍 Mappa</button>
+        </div>
+        <div class="sugglist" id="viaCantiereSugg" style="display:none"></div>
+        <div class="hint" id="gpsCantiereHint"></div>
       </div>
     </div>
     <div class="grid" style="margin-top:10px">
@@ -452,7 +469,8 @@ function arrow(ctx,x1,y1,x2,y2){ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,
 
 /* ---------- STATO ---------- */
 let state=normalize(load())||newRilievo();
-function newRilievo(){return{cliente:'',tel:'',email:'',wa:false,tg:false,via:'',citofono:'',tipoCliente:'privato',referente:'',lat:null,lng:null,
+function newRilievo(){return{cliente:'',tel:'',email:'',wa:false,tg:false,via:'',citofono:'',tipoCliente:'privato',referente:'',
+  cantiereDiverso:false,viaCantiere:'',lat:null,lng:null,latCantiere:null,lngCantiere:null,
   data:todayISO(),rilevatore:'',destType:'lead',destCommessa:'',items:[blankItem()]};}
 function blankItem(){return{pos:'',tipologia:'',serie:'',colore:'',vetri:'',telaio:'',apertura:'',
   hmaniglia:'',L:'',H:'',PZ:'1',nota:'',cassonetto:'no',_confirm:true,
@@ -466,6 +484,10 @@ function normalize(s){if(!s)return s;
   if(s.citofono===undefined)s.citofono='';
   if(s.tipoCliente===undefined)s.tipoCliente='privato';
   if(s.referente===undefined)s.referente='';
+  if(s.cantiereDiverso===undefined)s.cantiereDiverso=false;
+  if(s.viaCantiere===undefined)s.viaCantiere='';
+  if(s.latCantiere===undefined)s.latCantiere=null;
+  if(s.lngCantiere===undefined)s.lngCantiere=null;
   (s.items||[]).forEach(it=>{
   if(!Array.isArray(it.foto))it.foto=it.foto?[it.foto]:[];
   if(it._confirm===undefined)it._confirm=true;
@@ -488,6 +510,15 @@ function renderHeader(){
   document.getElementById('btn_azienda').classList.toggle('active', isAzienda);
   document.getElementById('referente_wrap').style.display = isAzienda ? 'block' : 'none';
   c_referente.value = state.referente || '';
+  
+  c_cantiere_diverso.checked = !!state.cantiereDiverso;
+  document.getElementById('cantiere_via_wrap').style.display = state.cantiereDiverso ? 'block' : 'none';
+  c_via_cantiere.value = state.viaCantiere || '';
+  if (state.cantiereDiverso && state.latCantiere) {
+    document.getElementById('gpsCantiereHint').innerHTML = `✓ <a href="https://maps.google.com/?q=${state.latCantiere},${state.lngCantiere}" target="_blank">apri in mappa</a>`;
+  } else {
+    document.getElementById('gpsCantiereHint').innerHTML = '';
+  }
   
   c_data.value=state.data||todayISO();
   c_rilevatore.value=state.rilevatore;d_type.value=state.destType||'lead';d_commessa.value=state.destCommessa||'';
@@ -587,9 +618,9 @@ document.addEventListener('change',e=>{ // cassonetto sì/no + tipo select
   if(t.dataset.f==='cassonetto'){state.items[t.dataset.i].cassonetto=t.value;save();renderItems();}
   else if(t.dataset.cf==='tipo'){state.items[t.dataset.i].cas.tipo=t.value;save();}
 });
-['c_cliente','c_tel','c_via','c_data','c_rilevatore','c_email','c_citofono','c_referente'].forEach(id=>{
+['c_cliente','c_tel','c_via','c_data','c_rilevatore','c_email','c_citofono','c_referente','c_via_cantiere'].forEach(id=>{
   document.getElementById(id).addEventListener('input',e=>{
-    const map={c_cliente:'cliente',c_tel:'tel',c_via:'via',c_data:'data',c_rilevatore:'rilevatore',c_email:'email',c_citofono:'citofono',c_referente:'referente'};
+    const map={c_cliente:'cliente',c_tel:'tel',c_via:'via',c_data:'data',c_rilevatore:'rilevatore',c_email:'email',c_citofono:'citofono',c_referente:'referente',c_via_cantiere:'viaCantiere'};
     state[map[id]]=e.target.value;e.target.classList.remove('missing');
     if(id==='c_cliente') {
       renderDestPath();
@@ -601,6 +632,11 @@ document.addEventListener('change',e=>{ // cassonetto sì/no + tipo select
     }
     save();
   });
+});
+document.getElementById('c_cantiere_diverso').addEventListener('change',e=>{
+  state.cantiereDiverso = e.target.checked;
+  document.getElementById('cantiere_via_wrap').style.display = state.cantiereDiverso ? 'block' : 'none';
+  save();
 });
 document.getElementById('btn_privato').onclick = () => {
   state.tipoCliente = 'privato';
@@ -782,8 +818,12 @@ function fillClientFromContact(c) {
   state.citofono = c.citofono || '';
   state.tipoCliente = c.tipoCliente || 'privato';
   state.referente = c.referente || '';
-  if (c.lat !== undefined) state.lat = c.lat;
-  if (c.lng !== undefined) state.lng = c.lng;
+  state.cantiereDiverso = !!c.cantiereDiverso;
+  state.viaCantiere = c.viaCantiere || '';
+  state.lat = c.lat !== undefined ? c.lat : null;
+  state.lng = c.lng !== undefined ? c.lng : null;
+  state.latCantiere = c.latCantiere !== undefined ? c.latCantiere : null;
+  state.lngCantiere = c.lngCantiere !== undefined ? c.lngCantiere : null;
   
   c_cliente.value = state.cliente;
   c_tel.value = state.tel;
@@ -793,6 +833,15 @@ function fillClientFromContact(c) {
   c_via.value = state.via;
   c_citofono.value = state.citofono;
   c_referente.value = state.referente;
+  
+  c_cantiere_diverso.checked = state.cantiereDiverso;
+  document.getElementById('cantiere_via_wrap').style.display = state.cantiereDiverso ? 'block' : 'none';
+  c_via_cantiere.value = state.viaCantiere;
+  if (state.cantiereDiverso && state.latCantiere) {
+    document.getElementById('gpsCantiereHint').innerHTML = `✓ <a href="https://maps.google.com/?q=${state.latCantiere},${state.lngCantiere}" target="_blank">apri in mappa</a>`;
+  } else {
+    document.getElementById('gpsCantiereHint').innerHTML = '';
+  }
   
   const isAzienda = state.tipoCliente === 'azienda';
   document.getElementById('btn_privato').classList.toggle('active', !isAzienda);
@@ -820,8 +869,12 @@ function saveCurrentToRubrica() {
     citofono: state.citofono,
     tipoCliente: state.tipoCliente,
     referente: state.referente,
+    cantiereDiverso: state.cantiereDiverso,
+    viaCantiere: state.viaCantiere,
     lat: state.lat,
-    lng: state.lng
+    lng: state.lng,
+    latCantiere: state.latCantiere,
+    lngCantiere: state.lngCantiere
   };
   if (idx >= 0) {
     rub[idx] = contact;
@@ -928,7 +981,13 @@ let mapSelectedLng = null;
 const mapmodal = document.getElementById('mapmodal');
 const mapAddressPreview = document.getElementById('mapAddressPreview');
 
+let mapTargetField = 'via'; // 'via' o 'viaCantiere'
 document.getElementById('gpsBtn').onclick = () => {
+  mapTargetField = 'via';
+  openMapModal();
+};
+document.getElementById('gpsCantiereBtn').onclick = () => {
+  mapTargetField = 'viaCantiere';
   openMapModal();
 };
 document.getElementById('mapClose').onclick = () => {
@@ -939,27 +998,35 @@ document.getElementById('mapGpsLocate').onclick = () => {
 };
 document.getElementById('mapConfirm').onclick = () => {
   if (mapSelectedLat && mapSelectedLng) {
-    state.lat = mapSelectedLat;
-    state.lng = mapSelectedLng;
+    const targetPropLat = mapTargetField === 'via' ? 'lat' : 'latCantiere';
+    const targetPropLng = mapTargetField === 'via' ? 'lng' : 'lngCantiere';
+    const targetInput = mapTargetField === 'via' ? c_via : c_via_cantiere;
+    const targetHint = mapTargetField === 'via' ? 'gpsHint' : 'gpsCantiereHint';
+    
+    state[targetPropLat] = mapSelectedLat;
+    state[targetPropLng] = mapSelectedLng;
+    
     mapAddressPreview.textContent = "Risoluzione indirizzo finale...";
-    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${state.lat}&lon=${state.lng}&email=fioreinstallazioni@gmail.com`)
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${mapSelectedLat}&lon=${mapSelectedLng}&email=fioreinstallazioni@gmail.com`)
       .then(r => r.json())
       .then(d => {
         const clean = formatAddressDetails(d.address);
-        const finalAddr = clean || d.display_name || `${state.lat.toFixed(6)}, ${state.lng.toFixed(6)}`;
-        c_via.value = finalAddr;
-        state.via = finalAddr;
-        c_via.classList.remove('missing');
-        document.getElementById('gpsHint').innerHTML = `✓ <a href="https://maps.google.com/?q=${state.lat},${state.lng}" target="_blank">apri in mappa</a>`;
+        const finalAddr = clean || d.display_name || `${mapSelectedLat.toFixed(6)}, ${mapSelectedLng.toFixed(6)}`;
+        targetInput.value = finalAddr;
+        if (mapTargetField === 'via') state.via = finalAddr;
+        else state.viaCantiere = finalAddr;
+        targetInput.classList.remove('missing');
+        document.getElementById(targetHint).innerHTML = `✓ <a href="https://maps.google.com/?q=${mapSelectedLat},${mapSelectedLng}" target="_blank">apri in mappa</a>`;
         save();
         mapmodal.classList.remove('open');
       })
       .catch(() => {
-        const backupAddr = `${state.lat.toFixed(6)}, ${state.lng.toFixed(6)}`;
-        c_via.value = backupAddr;
-        state.via = backupAddr;
-        c_via.classList.remove('missing');
-        document.getElementById('gpsHint').innerHTML = `✓ <a href="https://maps.google.com/?q=${state.lat},${state.lng}" target="_blank">apri in mappa</a>`;
+        const backupAddr = `${mapSelectedLat.toFixed(6)}, ${mapSelectedLng.toFixed(6)}`;
+        targetInput.value = backupAddr;
+        if (mapTargetField === 'via') state.via = backupAddr;
+        else state.viaCantiere = backupAddr;
+        targetInput.classList.remove('missing');
+        document.getElementById(targetHint).innerHTML = `✓ <a href="https://maps.google.com/?q=${mapSelectedLat},${mapSelectedLng}" target="_blank">apri in mappa</a>`;
         save();
         mapmodal.classList.remove('open');
       });
@@ -974,9 +1041,12 @@ function openMapModal() {
   let startLng = 14.2681;
   let zoom = 12;
   
-  if (state.lat && state.lng) {
-    startLat = state.lat;
-    startLng = state.lng;
+  const currentLat = mapTargetField === 'via' ? state.lat : state.latCantiere;
+  const currentLng = mapTargetField === 'via' ? state.lng : state.lngCantiere;
+  
+  if (currentLat && currentLng) {
+    startLat = currentLat;
+    startLng = currentLng;
     zoom = 17;
   }
   
@@ -1098,11 +1168,37 @@ c_via.addEventListener('input',()=>{clearTimeout(viaTimer);const q=c_via.value.t
     .catch(()=>list.style.display='none');},600);});
 document.addEventListener('click',e=>{if(e.target!==c_via)document.getElementById('viaSugg').style.display='none';});
 
+let viaCantiereTimer=null;
+c_via_cantiere.addEventListener('input',()=>{clearTimeout(viaCantiereTimer);const q=c_via_cantiere.value.trim();
+  const list=document.getElementById('viaCantiereSugg');if(q.length<4){list.style.display='none';return;}
+  viaCantiereTimer=setTimeout(()=>{fetch('https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&countrycodes=it&limit=5&q='+encodeURIComponent(q)+'&email=fioreinstallazioni@gmail.com')
+    .then(r=>r.json()).then(arr=>{if(!arr.length){list.style.display='none';return;}
+      const formattedArr = arr.map(a => {
+        const clean = formatAddressDetails(a.address);
+        return {
+          formatted: clean || a.display_name,
+          lat: a.lat,
+          lon: a.lon
+        };
+      });
+      list.innerHTML=formattedArr.map(f=>'<div>'+esc(f.formatted)+'</div>').join('');list.style.display='block';
+      [...list.children].forEach((d,k)=>d.onclick=()=>{
+        const val = formattedArr[k].formatted;
+        c_via_cantiere.value=val;state.viaCantiere=val;
+        state.latCantiere=+formattedArr[k].lat;state.lngCantiere=+formattedArr[k].lon;
+        c_via_cantiere.classList.remove('missing');list.style.display='none';
+        document.getElementById('gpsCantiereHint').innerHTML=`✓ <a href="https://maps.google.com/?q=${state.latCantiere},${state.lngCantiere}" target="_blank">apri in mappa</a>`;
+        save();
+      });})
+    .catch(()=>list.style.display='none');},600);});
+document.addEventListener('click',e=>{if(e.target!==c_via_cantiere)document.getElementById('viaCantiereSugg').style.display='none';});
+
 /* ---------- VALIDAZIONE (tutti i campi obbligatori) ---------- */
 function validate(){
   document.querySelectorAll('.missing').forEach(x=>x.classList.remove('missing'));
   const miss=[];let firstEl=null;
   const reqH=[['c_cliente','Cliente'],['c_tel','Telefono'],['c_via','Indirizzo'],['c_data','Data'],['c_rilevatore','Rilevatore']];
+  if(state.cantiereDiverso){reqH.push(['c_via_cantiere','Indirizzo Cantiere']);}
   reqH.forEach(([id,lab])=>{const el=document.getElementById(id);if(!el.value.trim()){el.classList.add('missing');miss.push(lab);firstEl=firstEl||el;}});
   if(state.destType==='commessa'&&!state.destCommessa.trim()){d_commessa.classList.add('missing');miss.push('Commessa');firstEl=firstEl||d_commessa;}
   const reqI=['pos','tipologia','L','H','PZ','serie','colore','vetri','telaio','apertura','hmaniglia'];
@@ -1180,7 +1276,8 @@ function buildReportInner(){
         return channels.length ? ' (' + channels.join('/') + ')' : '';
       })()}</td></tr>
       ${state.email ? '<tr><td colspan="2"><b>Email:</b> ' + esc(state.email) + '</td></tr>' : ''}
-      <tr><td colspan="2"><b>Indirizzo:</b> ${esc(state.via)}</td></tr>
+      <tr><td colspan="2"><b>Indirizzo Cliente:</b> ${esc(state.via)}</td></tr>
+      ${state.cantiereDiverso ? '<tr><td colspan="2"><b>Indirizzo Cantiere:</b> ' + esc(state.viaCantiere) + '</td></tr>' : ''}
       ${state.citofono ? '<tr><td colspan="2"><b>Citofono/Note:</b> ' + esc(state.citofono) + '</td></tr>' : ''}
       <tr><td><b>Rilevatore:</b> ${esc(state.rilevatore)}</td><td><b>Cartella:</b> ${esc(destPath())}/</td></tr>
     </table>
@@ -1282,8 +1379,19 @@ async function buildPdfBlob(){
   }
   
   if (state.via) {
+    const label = state.cantiereDiverso ? 'Indirizzo Cliente:' : 'Indirizzo:';
     const viaLines = doc.splitTextToSize(state.via, W - 20);
-    kv('Indirizzo:', viaLines[0], M, y);
+    kv(label, viaLines[0], M, y);
+    for (let i = 1; i < viaLines.length; i++) {
+      y += 4.5;
+      doc.text(viaLines[i], M + 18, y);
+    }
+    y += 5;
+  }
+  
+  if (state.cantiereDiverso && state.viaCantiere) {
+    const viaLines = doc.splitTextToSize(state.viaCantiere, W - 20);
+    kv('Indirizzo Cantiere:', viaLines[0], M, y);
     for (let i = 1; i < viaLines.length; i++) {
       y += 4.5;
       doc.text(viaLines[i], M + 18, y);
