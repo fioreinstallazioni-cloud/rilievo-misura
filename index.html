@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#1a4f9c">
 <title>Rilievo Misura — DF Fiore Installazioni</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
   :root{
     --df-blue:#1a4f9c; --df-blue-dark:#143d78; --df-light:#eef3fb;
@@ -144,6 +146,33 @@
   .psheet-box button{padding:15px;border:1px solid var(--line);border-radius:12px;background:#fff;font-size:16px;font-weight:600;color:var(--df-blue);cursor:pointer}
   .psheet-box button.c{color:var(--muted);font-weight:500}
   @media (max-width:520px){ .g3{grid-template-columns:1fr 1fr} .tplgrid{grid-template-columns:1fr 1fr} }
+  
+  /* Stili Flags WA/TG */
+  .flags{display:flex;gap:12px;margin-top:6px}
+  .flags label.chk{display:inline-flex;align-items:center;gap:4px;font-size:14px;font-weight:normal;color:var(--ink);cursor:pointer}
+  .flags input[type=checkbox]{width:18px;height:18px;margin:0}
+
+  /* Modale Mappa (Leaflet) */
+  .mapmodal{position:fixed;inset:0;z-index:130;background:rgba(0,0,0,.55);display:none;flex-direction:column;padding:0}
+  .mapmodal.open{display:flex}
+  .mapbox{background:#fff;width:100%;height:100%;display:flex;flex-direction:column;position:relative}
+  .map-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--df-blue);color:#fff;font-weight:700}
+  #mapContainer{flex:1;width:100%;background:#e0e0e0}
+  .map-footer{padding:12px;background:#fff;border-top:1px solid var(--line);display:flex;gap:8px}
+  .map-address{position:absolute;top:56px;left:10px;right:10px;background:rgba(255,255,255,0.95);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:13px;z-index:1000;box-shadow:0 2px 6px rgba(0,0,0,0.15);font-weight:500;display:flex;align-items:center;gap:6px}
+
+  /* Modale Rubrica */
+  .rubmodal{position:fixed;inset:0;z-index:125;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:16px}
+  .rubmodal.open{display:flex}
+  .rubbox{background:#fff;border-radius:14px;max-width:540px;width:100%;max-height:85vh;overflow:hidden;display:flex;flex-direction:column;padding:18px}
+  .rub-list{flex:1;overflow-y:auto;margin-top:10px;border:1px solid var(--line);border-radius:10px;background:#fafbfd}
+  .rub-item{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #f0f2f6;cursor:pointer}
+  .rub-item:hover{background:var(--df-light)}
+  .rub-info{flex:1;min-width:0;text-align:left}
+  .rub-name{font-weight:700;font-size:14px;color:var(--ink)}
+  .rub-details{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.3}
+  .rub-actions{display:flex;gap:6px;margin-left:8px}
+  .rub-actions button{padding:6px 8px;font-size:12px}
 </style>
 </head>
 <body>
@@ -160,23 +189,42 @@
   <div class="card">
     <h2>👤 Cliente</h2>
     <div class="grid g2">
-      <div><label>Cliente / Cantiere <span class="req">*</span></label><input id="c_cliente" placeholder="Nome cliente"></div>
+      <div class="sugg">
+        <label>Cliente / Cantiere <span class="req">*</span></label>
+        <div style="display:flex;gap:8px">
+          <input id="c_cliente" placeholder="Nome cliente" list="dl_rubrica" autocomplete="off" style="flex:1">
+          <button class="minibtn" id="rubricaBtn" title="Apri rubrica">📇</button>
+        </div>
+      </div>
       <div><label>Telefono <span class="req">*</span></label><input id="c_tel" type="tel" placeholder="Cellulare"></div>
+    </div>
+    <div class="grid g2" style="margin-top:10px">
+      <div><label>Email <span style="font-weight:400;color:var(--muted)">(facoltativa)</span></label><input id="c_email" type="email" placeholder="email cliente"></div>
+      <div><label>Il numero ha</label>
+        <div class="flags">
+          <label class="chk"><input type="checkbox" id="c_wa">💬 WhatsApp</label>
+          <label class="chk"><input type="checkbox" id="c_tg">✈️ Telegram</label>
+        </div>
+      </div>
     </div>
     <div class="grid" style="margin-top:10px">
       <div class="sugg">
         <label>Indirizzo <span class="req">*</span></label>
         <div style="display:flex;gap:8px">
-          <input id="c_via" placeholder="Inizia a scrivere la via…" autocomplete="off" style="flex:1">
-          <button class="minibtn" id="gpsBtn" title="Usa posizione attuale">📍 GPS</button>
+          <input id="c_via" placeholder="Via, città, CAP…" autocomplete="off" style="flex:1">
+          <button class="minibtn" id="gpsBtn" title="Posizione su mappa">📍 Mappa</button>
         </div>
         <div class="sugglist" id="viaSugg" style="display:none"></div>
         <div class="hint" id="gpsHint"></div>
       </div>
     </div>
     <div class="grid" style="margin-top:10px">
+      <div><label>🔔 Citofono</label>
+        <textarea id="c_citofono" placeholder="Es. suonare 'Rossi' · per aprire il portone premere 3 · citofono senza nome: citofonare al vicino Bianchi"></textarea></div>
+    </div>
+    <div class="grid" style="margin-top:10px">
       <div><label>Note indirizzo / contatto</label>
-        <textarea id="c_vianote" placeholder="Es. citofono 20 · assenza ascensore · citofono non presente, chiamare il cliente all'arrivo"></textarea></div>
+        <textarea id="c_vianote" placeholder="Es. assenza ascensore · parcheggio interno · chiamare all'arrivo"></textarea></div>
     </div>
     <div class="grid g2" style="margin-top:10px">
       <div><label>Data rilievo <span class="req">*</span></label><input id="c_data" type="date"></div>
@@ -203,6 +251,35 @@
   <div class="summary" id="summary"></div>
   <div id="items"></div>
   <button class="addbtn" id="addBtn">＋ Aggiungi posizione</button>
+</div>
+
+<!-- MODALE RUBRICA -->
+<div class="rubmodal" id="rubmodal">
+  <div class="rubbox">
+    <h3 style="margin:0 0 10px;color:var(--df-blue);display:flex;align-items:center;gap:6px">📇 Rubrica Clienti</h3>
+    <input type="text" id="rubSearch" placeholder="Cerca per nome o telefono..." style="margin-bottom:10px">
+    <div class="rub-list" id="rubList"></div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="act" id="rubAddCurrent" style="flex:1;padding:10px;font-size:14px;font-weight:700;background:var(--df-blue);color:#fff;border:none;border-radius:10px;cursor:pointer">💾 Aggiungi cliente corrente</button>
+      <button class="act sec" id="rubClose" style="flex:0 0 100px;padding:10px;font-size:14px;border:1px solid var(--line);background:#fff;border-radius:10px;cursor:pointer">Chiudi</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODALE MAPPA (Leaflet) -->
+<div class="mapmodal" id="mapmodal">
+  <div class="mapbox">
+    <div class="map-header">
+      <span>📍 Seleziona Posizione su Mappa</span>
+      <button id="mapGpsLocate" style="background:rgba(255,255,255,0.2);color:#fff;border:none;border-radius:6px;padding:6px 10px;font-size:13px;font-weight:600;cursor:pointer">Usa GPS</button>
+    </div>
+    <div class="map-address" id="mapAddressPreview">Spostamento marker...</div>
+    <div id="mapContainer"></div>
+    <div class="map-footer">
+      <button class="act" id="mapConfirm" style="background:var(--ok);color:#fff;font-weight:700;padding:12px;border:none;border-radius:10px;font-size:14px;flex:1;cursor:pointer">✓ Conferma posizione</button>
+      <button class="act sec" id="mapClose" style="background:#fff;border:1px solid var(--line);color:var(--ink);padding:12px;border-radius:10px;font-size:14px;flex:0 0 100px;cursor:pointer">Annulla</button>
+    </div>
+  </div>
 </div>
 
 <div class="bottombar">
@@ -342,14 +419,19 @@ function arrow(ctx,x1,y1,x2,y2){ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,
 
 /* ---------- STATO ---------- */
 let state=normalize(load())||newRilievo();
-function newRilievo(){return{cliente:'',tel:'',via:'',vianote:'',lat:null,lng:null,
+function newRilievo(){return{cliente:'',tel:'',email:'',wa:false,tg:false,via:'',citofono:'',vianote:'',lat:null,lng:null,
   data:todayISO(),rilevatore:'',destType:'lead',destCommessa:'',items:[blankItem()]};}
 function blankItem(){return{pos:'',tipologia:'',serie:'',colore:'',vetri:'',telaio:'',apertura:'',
   hmaniglia:'',L:'',H:'',PZ:'1',nota:'',cassonetto:'no',_confirm:true,
   cas:{L:'',H:'',P:'',tipo:'',note:'',foto:[],disegno:null},
   foto:[],disegno:null};}
 /* normalizza dati salvati da versioni precedenti */
-function normalize(s){if(!s)return s;(s.items||[]).forEach(it=>{
+function normalize(s){if(!s)return s;
+  if(s.email===undefined)s.email='';
+  if(s.wa===undefined)s.wa=false;
+  if(s.tg===undefined)s.tg=false;
+  if(s.citofono===undefined)s.citofono='';
+  (s.items||[]).forEach(it=>{
   if(!Array.isArray(it.foto))it.foto=it.foto?[it.foto]:[];
   if(it._confirm===undefined)it._confirm=true;
   if(!it.cas)it.cas={L:'',H:'',P:'',tipo:'',note:'',foto:[],disegno:null};
@@ -359,13 +441,19 @@ function todayISO(){const d=new Date();const z=n=>String(n).padStart(2,'0');
 
 /* ---------- HEADER ---------- */
 function renderHeader(){
-  c_cliente.value=state.cliente;c_tel.value=state.tel;c_via.value=state.via;
+  c_cliente.value=state.cliente;c_tel.value=state.tel;
+  c_email.value=state.email||'';
+  c_wa.checked=!!state.wa;
+  c_tg.checked=!!state.tg;
+  c_via.value=state.via;
+  c_citofono.value=state.citofono||'';
   c_vianote.value=state.vianote||'';c_data.value=state.data||todayISO();
   c_rilevatore.value=state.rilevatore;d_type.value=state.destType||'lead';d_commessa.value=state.destCommessa||'';
   if(!document.getElementById('dl_commesse')){const d=document.createElement('div');
     d.innerHTML='<datalist id="dl_commesse">'+COMMESSE.map(c=>'<option value="'+esc(c)+'">').join('')+'</datalist>';
     document.body.appendChild(d);}
   renderDestPath();
+  renderRubricaDatalist();
 }
 function destFolderName(){return(state.cliente||'Cliente senza nome').replace(/[\\/:*?"<>|]/g,'-').trim();}
 function destPath(){if(state.destType==='commessa'&&state.destCommessa)return DROPBOX_BASE+'/'+state.destCommessa;
@@ -453,10 +541,25 @@ document.addEventListener('change',e=>{ // cassonetto sì/no + tipo select
   if(t.dataset.f==='cassonetto'){state.items[t.dataset.i].cassonetto=t.value;save();renderItems();}
   else if(t.dataset.cf==='tipo'){state.items[t.dataset.i].cas.tipo=t.value;save();}
 });
-['c_cliente','c_tel','c_via','c_vianote','c_data','c_rilevatore'].forEach(id=>{
+['c_cliente','c_tel','c_via','c_vianote','c_data','c_rilevatore','c_email','c_citofono'].forEach(id=>{
   document.getElementById(id).addEventListener('input',e=>{
-    const map={c_cliente:'cliente',c_tel:'tel',c_via:'via',c_vianote:'vianote',c_data:'data',c_rilevatore:'rilevatore'};
-    state[map[id]]=e.target.value;e.target.classList.remove('missing');if(id==='c_cliente')renderDestPath();save();});
+    const map={c_cliente:'cliente',c_tel:'tel',c_via:'via',c_vianote:'vianote',c_data:'data',c_rilevatore:'rilevatore',c_email:'email',c_citofono:'citofono'};
+    state[map[id]]=e.target.value;e.target.classList.remove('missing');
+    if(id==='c_cliente') {
+      renderDestPath();
+      const rub = getRubrica();
+      const found = rub.find(c => c.nome.toLowerCase().trim() === e.target.value.toLowerCase().trim());
+      if (found) {
+        fillClientFromContact(found);
+      }
+    }
+    save();
+  });
+});
+['c_wa','c_tg'].forEach(id=>{
+  document.getElementById(id).addEventListener('change',e=>{
+    const map={c_wa:'wa',c_tg:'tg'};
+    state[map[id]]=e.target.checked;save();});
 });
 d_type.addEventListener('change',e=>{state.destType=e.target.value;renderDestPath();save();});
 d_commessa.addEventListener('input',e=>{state.destCommessa=e.target.value;e.target.classList.remove('missing');renderDestPath();save();});
@@ -484,14 +587,14 @@ document.addEventListener('click',e=>{
 });
 document.getElementById('addBtn').onclick=()=>{state.items.push(blankItem());save();renderItems();window.scrollTo(0,document.body.scrollHeight);};
 document.getElementById('saveBtn').onclick=()=>{
-  try{localStorage.setItem(STORE_KEY,JSON.stringify(state));toast('Bozza salvata sul dispositivo ✓',true);}
+  try{saveCurrentToRubrica();localStorage.setItem(STORE_KEY,JSON.stringify(state));toast('Bozza salvata sul dispositivo ✓',true);}
   catch(e){toast('Memoria piena: usa Esporta dati',false);}};
 function toast(msg,ok){const s=document.getElementById('savestate');s.textContent=msg;
   s.classList.toggle('err',!ok);s.classList.add('show');setTimeout(()=>s.classList.remove('show'),1800);}
 document.getElementById('newBtn').onclick=()=>{if(confirm('Iniziare un NUOVO rilievo? (quello attuale resta salvato solo se esportato)')){
   state=newRilievo();save();renderHeader();renderItems();}};
 document.getElementById('cloudBtn').onclick=saveToDropbox;
-document.getElementById('pdfBtn').onclick=()=>{if(validate())exportPDF();};
+document.getElementById('pdfBtn').onclick=()=>{if(validate()){saveCurrentToRubrica();exportPDF();}};
 
 /* ---------- FOTO (camera/file) ---------- */
 function pickPhoto(cb){
@@ -572,24 +675,356 @@ document.getElementById('tplClose').onclick=()=>document.getElementById('tplmoda
 document.getElementById('tplgrid').onclick=e=>{const cell=e.target.closest('[data-tpl]');if(!cell)return;
   ed.tpl=cell.dataset.tpl;document.getElementById('tplmodal').classList.remove('open');redrawEd();};
 
-/* ---------- GPS + SUGGERIMENTI INDIRIZZO (Nominatim, solo online) ---------- */
-document.getElementById('gpsBtn').onclick=()=>{const hint=document.getElementById('gpsHint');
-  if(!navigator.geolocation){hint.textContent='GPS non disponibile';return;}
-  hint.textContent='📍 rilevamento posizione…';
-  navigator.geolocation.getCurrentPosition(p=>{state.lat=p.coords.latitude;state.lng=p.coords.longitude;
-    fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat='+state.lat+'&lon='+state.lng+'&email=fioreinstallazioni@gmail.com')
-    .then(r=>r.json()).then(d=>{if(d&&d.display_name){c_via.value=d.display_name;state.via=d.display_name;c_via.classList.remove('missing');}
-      hint.innerHTML='✓ <a href="https://maps.google.com/?q='+state.lat+','+state.lng+'" target="_blank">apri in mappa</a>';save();})
-    .catch(()=>{hint.textContent='✓ posizione presa (indirizzo non risolto, sei offline?)';save();});
-  },()=>hint.textContent='Posizione negata o non disponibile',{enableHighAccuracy:true,timeout:10000});};
+/* ---------- FORMATTAZIONE INDIRIZZO (Via, città, CAP) ---------- */
+function formatAddressDetails(addr) {
+  if (!addr) return '';
+  const road = addr.road || addr.pedestrian || addr.path || addr.suburb || addr.neighbourhood || addr.square || '';
+  const num = addr.house_number ? ' ' + addr.house_number : '';
+  const city = addr.city || addr.town || addr.village || addr.municipality || addr.hamlet || '';
+  const zip = addr.postcode || '';
+  
+  const streetPart = road ? road + num : '';
+  return [streetPart, city, zip].filter(item => item.trim() !== '').join(', ');
+}
+
+/* ---------- GESTIONE RUBRICA ---------- */
+function getRubrica() {
+  try {
+    return JSON.parse(localStorage.getItem('df_rubrica')) || [];
+  } catch(e) {
+    return [];
+  }
+}
+function saveRubrica(arr) {
+  try {
+    localStorage.setItem('df_rubrica', JSON.stringify(arr));
+    renderRubricaDatalist();
+  } catch(e) {}
+}
+function renderRubricaDatalist() {
+  let dl = document.getElementById('dl_rubrica');
+  if(!dl) {
+    dl = document.createElement('datalist');
+    dl.id = 'dl_rubrica';
+    document.body.appendChild(dl);
+  }
+  const rub = getRubrica();
+  const names = [...new Set(rub.map(c => c.nome))].sort();
+  dl.innerHTML = names.map(n => `<option value="${esc(n)}">`).join('');
+}
+function fillClientFromContact(c) {
+  state.cliente = c.nome;
+  state.tel = c.tel || '';
+  state.email = c.email || '';
+  state.wa = !!c.wa;
+  state.tg = !!c.tg;
+  state.via = c.via || '';
+  state.citofono = c.citofono || '';
+  state.vianote = c.vianote || '';
+  if (c.lat !== undefined) state.lat = c.lat;
+  if (c.lng !== undefined) state.lng = c.lng;
+  
+  c_cliente.value = state.cliente;
+  c_tel.value = state.tel;
+  c_email.value = state.email;
+  c_wa.checked = state.wa;
+  c_tg.checked = state.tg;
+  c_via.value = state.via;
+  c_citofono.value = state.citofono;
+  c_vianote.value = state.vianote;
+  
+  [c_cliente, c_tel, c_via].forEach(el => el.classList.remove('missing'));
+  renderDestPath();
+  save();
+  toast('Cliente caricato da rubrica ✓', true);
+}
+function saveCurrentToRubrica() {
+  const nome = state.cliente.trim();
+  if (!nome) return;
+  const rub = getRubrica();
+  const idx = rub.findIndex(c => c.nome.toLowerCase().trim() === nome.toLowerCase().trim());
+  const contact = {
+    nome: state.cliente,
+    tel: state.tel,
+    email: state.email,
+    wa: state.wa,
+    tg: state.tg,
+    via: state.via,
+    citofono: state.citofono,
+    vianote: state.vianote,
+    lat: state.lat,
+    lng: state.lng
+  };
+  if (idx >= 0) {
+    rub[idx] = contact;
+  } else {
+    rub.push(contact);
+  }
+  saveRubrica(rub);
+}
+
+// Interfaccia Rubrica
+const rubmodal = document.getElementById('rubmodal');
+const rubList = document.getElementById('rubList');
+const rubSearch = document.getElementById('rubSearch');
+
+document.getElementById('rubricaBtn').onclick = () => {
+  openRubrica();
+};
+document.getElementById('rubClose').onclick = () => {
+  rubmodal.classList.remove('open');
+};
+document.getElementById('rubAddCurrent').onclick = () => {
+  if (!state.cliente.trim()) {
+    alert('Inserisci prima il nome del cliente nel modulo.');
+    return;
+  }
+  saveCurrentToRubrica();
+  openRubrica();
+  toast('Cliente salvato in rubrica ✓', true);
+};
+rubSearch.addEventListener('input', () => {
+  renderRubricaItems(rubSearch.value);
+});
+function openRubrica() {
+  rubSearch.value = '';
+  renderRubricaItems();
+  rubmodal.classList.add('open');
+}
+function renderRubricaItems(query = '') {
+  const rub = getRubrica();
+  rubList.innerHTML = '';
+  const q = query.toLowerCase().trim();
+  
+  const filtered = rub.filter(c => 
+    c.nome.toLowerCase().includes(q) || 
+    (c.tel && c.tel.includes(q))
+  );
+  
+  if (filtered.length === 0) {
+    rubList.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-size:14px">Nessun contatto in rubrica</div>';
+    return;
+  }
+  
+  filtered.sort((a,b) => a.nome.localeCompare(b.nome)).forEach(c => {
+    const el = document.createElement('div');
+    el.className = 'rub-item';
+    let channels = [];
+    if (c.wa) channels.push('WA');
+    if (c.tg) channels.push('TG');
+    const chanStr = channels.length ? ' (' + channels.join('/') + ')' : '';
+    
+    el.innerHTML = `
+      <div class="rub-info">
+        <div class="rub-name">${esc(c.nome)}</div>
+        <div class="rub-details">
+          ${c.tel ? '📞 ' + esc(c.tel) + chanStr : ''} 
+          ${c.email ? ' · ✉️ ' + esc(c.email) : ''}
+          ${c.via ? '<br>📍 ' + esc(c.via) : ''}
+        </div>
+      </div>
+      <div class="rub-actions">
+        <button class="iconbtn" data-rub-act="sel" style="background:#eaf7ef;color:var(--ok)">Scegli</button>
+        <button class="iconbtn del" data-rub-act="del">🗑</button>
+      </div>
+    `;
+    el.querySelector('[data-rub-act="sel"]').onclick = (e) => {
+      e.stopPropagation();
+      fillClientFromContact(c);
+      rubmodal.classList.remove('open');
+    };
+    el.querySelector('[data-rub-act="del"]').onclick = (e) => {
+      e.stopPropagation();
+      if (confirm(`Eliminare ${c.nome} dalla rubrica?`)) {
+        const fullRub = getRubrica();
+        const updated = fullRub.filter(item => item.nome.toLowerCase().trim() !== c.nome.toLowerCase().trim());
+        saveRubrica(updated);
+        renderRubricaItems(rubSearch.value);
+      }
+    };
+    el.onclick = () => {
+      fillClientFromContact(c);
+      rubmodal.classList.remove('open');
+    };
+    rubList.appendChild(el);
+  });
+}
+
+/* ---------- INTERFACCIA MAPPA E GPS (Leaflet) ---------- */
+let map = null;
+let mapMarker = null;
+let mapSelectedLat = null;
+let mapSelectedLng = null;
+const mapmodal = document.getElementById('mapmodal');
+const mapAddressPreview = document.getElementById('mapAddressPreview');
+
+document.getElementById('gpsBtn').onclick = () => {
+  openMapModal();
+};
+document.getElementById('mapClose').onclick = () => {
+  mapmodal.classList.remove('open');
+};
+document.getElementById('mapGpsLocate').onclick = () => {
+  locateGpsOnMap();
+};
+document.getElementById('mapConfirm').onclick = () => {
+  if (mapSelectedLat && mapSelectedLng) {
+    state.lat = mapSelectedLat;
+    state.lng = mapSelectedLng;
+    mapAddressPreview.textContent = "Risoluzione indirizzo finale...";
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${state.lat}&lon=${state.lng}&email=fioreinstallazioni@gmail.com`)
+      .then(r => r.json())
+      .then(d => {
+        const clean = formatAddressDetails(d.address);
+        const finalAddr = clean || d.display_name || `${state.lat.toFixed(6)}, ${state.lng.toFixed(6)}`;
+        c_via.value = finalAddr;
+        state.via = finalAddr;
+        c_via.classList.remove('missing');
+        document.getElementById('gpsHint').innerHTML = `✓ <a href="https://maps.google.com/?q=${state.lat},${state.lng}" target="_blank">apri in mappa</a>`;
+        save();
+        mapmodal.classList.remove('open');
+      })
+      .catch(() => {
+        const backupAddr = `${state.lat.toFixed(6)}, ${state.lng.toFixed(6)}`;
+        c_via.value = backupAddr;
+        state.via = backupAddr;
+        c_via.classList.remove('missing');
+        document.getElementById('gpsHint').innerHTML = `✓ <a href="https://maps.google.com/?q=${state.lat},${state.lng}" target="_blank">apri in mappa</a>`;
+        save();
+        mapmodal.classList.remove('open');
+      });
+  } else {
+    mapmodal.classList.remove('open');
+  }
+};
+
+function openMapModal() {
+  mapmodal.classList.add('open');
+  let startLat = 40.8518;
+  let startLng = 14.2681;
+  let zoom = 12;
+  
+  if (state.lat && state.lng) {
+    startLat = state.lat;
+    startLng = state.lng;
+    zoom = 17;
+  }
+  
+  mapSelectedLat = startLat;
+  mapSelectedLng = startLng;
+  
+  if (!map) {
+    map = L.map('mapContainer', {
+      zoomControl: true,
+      dragging: true
+    }).setView([startLat, startLng], zoom);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+    
+    const redDotIcon = L.divIcon({
+      html: '<div style="background-color:#d23b3b;width:18px;height:18px;border:3px solid #fff;border-radius:50%;box-shadow:0 1px 5px rgba(0,0,0,0.4)"></div>',
+      className: '',
+      iconSize: [18, 18],
+      iconAnchor: [9, 9]
+    });
+    
+    mapMarker = L.marker([startLat, startLng], {
+      draggable: true,
+      icon: redDotIcon
+    }).addTo(map);
+    
+    mapMarker.on('dragend', () => {
+      const pos = mapMarker.getLatLng();
+      updateSelectedLocation(pos.lat, pos.lng);
+    });
+    
+    map.on('click', (e) => {
+      mapMarker.setLatLng(e.latlng);
+      updateSelectedLocation(e.latlng.lat, e.latlng.lng);
+    });
+  } else {
+    map.setView([startLat, startLng], zoom);
+    mapMarker.setLatLng([startLat, startLng]);
+  }
+  
+  setTimeout(() => {
+    map.invalidateSize();
+  }, 100);
+  
+  updateSelectedLocation(startLat, startLng);
+  
+  if (!state.lat || !state.lng) {
+    locateGpsOnMap();
+  }
+}
+
+function updateSelectedLocation(lat, lng) {
+  mapSelectedLat = lat;
+  mapSelectedLng = lng;
+  mapAddressPreview.textContent = `Lat: ${lat.toFixed(6)}, Lng: ${lng.toFixed(6)} · Ottengo indirizzo...`;
+  geocodeLatLngPreview(lat, lng);
+}
+
+let previewGeocodeTimer = null;
+function geocodeLatLngPreview(lat, lng) {
+  clearTimeout(previewGeocodeTimer);
+  previewGeocodeTimer = setTimeout(() => {
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&email=fioreinstallazioni@gmail.com`)
+      .then(r => r.json())
+      .then(d => {
+        const clean = formatAddressDetails(d.address);
+        mapAddressPreview.textContent = clean || d.display_name || `Lat: ${lat.toFixed(6)}, Lng: ${lng.toFixed(6)}`;
+      })
+      .catch(() => {
+        mapAddressPreview.textContent = `Posizione: ${lat.toFixed(6)}, ${lng.toFixed(6)} (Offline)`;
+      });
+  }, 500);
+}
+
+function locateGpsOnMap() {
+  if (!navigator.geolocation) {
+    alert("GPS non supportato dal dispositivo.");
+    return;
+  }
+  mapAddressPreview.textContent = "📍 Rilevamento GPS in corso...";
+  navigator.geolocation.getCurrentPosition(p => {
+    const lat = p.coords.latitude;
+    const lng = p.coords.longitude;
+    map.setView([lat, lng], 17);
+    mapMarker.setLatLng([lat, lng]);
+    updateSelectedLocation(lat, lng);
+  }, () => {
+    alert("Impossibile accedere al GPS. Trascina la mappa manualmente.");
+    mapAddressPreview.textContent = "GPS non disponibile. Trascina il marker manualmente.";
+  }, { enableHighAccuracy: true, timeout: 8000 });
+}
+
+/* ---------- SUGGERIMENTI INDIRIZZO (Nominatim, solo online) ---------- */
 let viaTimer=null;
 c_via.addEventListener('input',()=>{clearTimeout(viaTimer);const q=c_via.value.trim();
   const list=document.getElementById('viaSugg');if(q.length<4){list.style.display='none';return;}
-  viaTimer=setTimeout(()=>{fetch('https://nominatim.openstreetmap.org/search?format=json&countrycodes=it&limit=5&q='+encodeURIComponent(q)+'&email=fioreinstallazioni@gmail.com')
+  viaTimer=setTimeout(()=>{fetch('https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&countrycodes=it&limit=5&q='+encodeURIComponent(q)+'&email=fioreinstallazioni@gmail.com')
     .then(r=>r.json()).then(arr=>{if(!arr.length){list.style.display='none';return;}
-      list.innerHTML=arr.map(a=>'<div>'+esc(a.display_name)+'</div>').join('');list.style.display='block';
-      [...list.children].forEach((d,k)=>d.onclick=()=>{c_via.value=arr[k].display_name;state.via=arr[k].display_name;
-        state.lat=+arr[k].lat;state.lng=+arr[k].lon;c_via.classList.remove('missing');list.style.display='none';save();});})
+      const formattedArr = arr.map(a => {
+        const clean = formatAddressDetails(a.address);
+        return {
+          formatted: clean || a.display_name,
+          lat: a.lat,
+          lon: a.lon
+        };
+      });
+      list.innerHTML=formattedArr.map(f=>'<div>'+esc(f.formatted)+'</div>').join('');list.style.display='block';
+      [...list.children].forEach((d,k)=>d.onclick=()=>{
+        const val = formattedArr[k].formatted;
+        c_via.value=val;state.via=val;
+        state.lat=+formattedArr[k].lat;state.lng=+formattedArr[k].lon;
+        c_via.classList.remove('missing');list.style.display='none';
+        document.getElementById('gpsHint').innerHTML=`✓ <a href="https://maps.google.com/?q=${state.lat},${state.lng}" target="_blank">apri in mappa</a>`;
+        save();
+      });})
     .catch(()=>list.style.display='none');},600);});
 document.addEventListener('click',e=>{if(e.target!==c_via)document.getElementById('viaSugg').style.display='none';});
 
@@ -662,10 +1097,19 @@ function buildReportInner(){
     .foot{margin-top:8px;font-size:11px;color:#555;display:flex;justify-content:space-between}</style>
     <div class="head"><div><div class="logo">DF</div> <span class="t">Scheda Rilievi</span></div>
       <div style="text-align:right;font-size:11px">Fiore Installazioni s.r.l.s.<br>Rilievo del ${fmtDate(state.data)}</div></div>
-    <table class="ci"><tr><td><b>Cliente:</b> ${esc(state.cliente)}</td><td><b>Tel:</b> ${esc(state.tel)}</td></tr>
+    <table class="ci">
+      <tr><td><b>Cliente:</b> ${esc(state.cliente)}</td><td><b>Tel:</b> ${esc(state.tel)}${(() => {
+        let channels = [];
+        if (state.wa) channels.push('WhatsApp');
+        if (state.tg) channels.push('Telegram');
+        return channels.length ? ' (' + channels.join('/') + ')' : '';
+      })()}</td></tr>
+      ${state.email ? '<tr><td colspan="2"><b>Email:</b> ' + esc(state.email) + '</td></tr>' : ''}
       <tr><td colspan="2"><b>Indirizzo:</b> ${esc(state.via)}</td></tr>
+      ${state.citofono ? '<tr><td colspan="2"><b>Citofono:</b> ' + esc(state.citofono) + '</td></tr>' : ''}
       ${state.vianote?'<tr><td colspan="2"><b>Note:</b> '+esc(state.vianote)+'</td></tr>':''}
-      <tr><td><b>Rilevatore:</b> ${esc(state.rilevatore)}</td><td><b>Cartella:</b> ${esc(destPath())}/</td></tr></table>
+      <tr><td><b>Rilevatore:</b> ${esc(state.rilevatore)}</td><td><b>Cartella:</b> ${esc(destPath())}/</td></tr>
+    </table>
     ${rows}
     <div class="foot"><span>${state.items.length} posizioni · ${pz} pezzi totali</span><span>Firma cliente: ________________</span></div>`;
 }
@@ -742,11 +1186,54 @@ async function buildPdfBlob(){
   // cliente
   doc.setTextColor(20);doc.setFontSize(9);
   const kv=(l,v,xx,yy)=>{F('bold');doc.text(l,xx,yy);F('normal');doc.text(String(v||''),xx+doc.getTextWidth(l)+2,yy);};
-  kv('Cliente:',state.cliente,M,y);kv('Tel:',state.tel,M+110,y);y+=5;
-  kv('Indirizzo:',state.via,M,y);y+=5;
-  if(state.vianote){const ls=doc.splitTextToSize(state.vianote,W-22);kv('Note:',ls[0],M,y);
-    for(let i=1;i<ls.length;i++){y+=4.5;doc.text(ls[i],M+14,y);}y+=5;}
-  kv('Rilevatore:',state.rilevatore,M,y);y+=5;
+  
+  let channels = [];
+  if (state.wa) channels.push('WA');
+  if (state.tg) channels.push('TG');
+  const chanStr = channels.length ? ' (' + channels.join('/') + ')' : '';
+  
+  kv('Cliente:', state.cliente, M, y);
+  kv('Tel:', (state.tel || '') + chanStr, M+110, y);
+  y += 5;
+  
+  if (state.email) {
+    kv('Email:', state.email, M, y);
+    y += 5;
+  }
+  
+  if (state.via) {
+    const viaLines = doc.splitTextToSize(state.via, W - 20);
+    kv('Indirizzo:', viaLines[0], M, y);
+    for (let i = 1; i < viaLines.length; i++) {
+      y += 4.5;
+      doc.text(viaLines[i], M + 18, y);
+    }
+    y += 5;
+  }
+  
+  if (state.citofono) {
+    const citoLines = doc.splitTextToSize(state.citofono, W - 20);
+    kv('Citofono:', citoLines[0], M, y);
+    for (let i = 1; i < citoLines.length; i++) {
+      y += 4.5;
+      doc.text(citoLines[i], M + 18, y);
+    }
+    y += 5;
+  }
+  
+  if (state.vianote) {
+    const noteLines = doc.splitTextToSize(state.vianote, W - 20);
+    kv('Note:', noteLines[0], M, y);
+    for (let i = 1; i < noteLines.length; i++) {
+      y += 4.5;
+      doc.text(noteLines[i], M + 12, y);
+    }
+    y += 5;
+  }
+  
+  kv('Rilevatore:', state.rilevatore, M, y);
+  y += 5;
+  
   doc.setFontSize(7.5);doc.setTextColor(90);doc.text('Cartella: '+destPath()+'/',M,y);
   doc.setTextColor(20);doc.setFontSize(9);y+=3;
   doc.setDrawColor(180);doc.line(M,y,PW-M,y);y+=4;
@@ -792,6 +1279,7 @@ async function buildPdfBlob(){
 
 async function saveToDropbox(){
   if(!validate())return;
+  saveCurrentToRubrica();
   if(!dbxLinked()){openCfg();toast('Collega prima Dropbox (⚙️)',false);return;}
   const btn=document.getElementById('cloudBtn');const old=btn.innerHTML;
   btn.innerHTML='<span class="em">⏳</span>Salvo…';btn.style.pointerEvents='none';
