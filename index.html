@@ -1253,11 +1253,12 @@ function validate(){
   reqH.forEach(([id,lab])=>{const el=document.getElementById(id);if(!el.value.trim()){el.classList.add('missing');miss.push(lab);firstEl=firstEl||el;}});
   if(state.destType==='commessa'&&!state.destCommessa.trim()){d_commessa.classList.add('missing');miss.push('Commessa');firstEl=firstEl||d_commessa;}
   const reqI=['pos','tipologia','L','H','PZ','serie','colore','vetri','telaio','apertura','hmaniglia'];
+  const warnings=[];
   state.items.forEach((it,i)=>{
     if(it._confirm===false)miss.push('Pos.'+(i+1)+': confermare posizione duplicata');
     reqI.forEach(f=>{if(!String(it[f]).trim()){const el=document.querySelector('[data-f="'+f+'"][data-i="'+i+'"]');
       if(el)el.classList.add('missing');miss.push('Pos.'+(i+1)+': '+f);firstEl=firstEl||el;}});
-    if(!it.disegno||!it.disegno.img)miss.push('Pos.'+(i+1)+': disegno');
+    if(!it.disegno||!it.disegno.img)warnings.push('Pos.'+(i+1)+': manca il disegno');
     if(!it.foto.length)miss.push('Pos.'+(i+1)+': almeno 1 foto');
     if(it.cassonetto==='si'){['L','H','P','tipo'].forEach(f=>{if(!String(it.cas[f]).trim()){
       const el=document.querySelector('[data-cf="'+f+'"][data-i="'+i+'"]');if(el)el.classList.add('missing');
@@ -1265,6 +1266,9 @@ function validate(){
   });
   if(miss.length){if(firstEl)firstEl.scrollIntoView({behavior:'smooth',block:'center'});
     alert('Compila tutti i campi obbligatori:\n\n• '+miss.slice(0,25).join('\n• ')+(miss.length>25?'\n…':''));return false;}
+  if(warnings.length){
+    return confirm('Attenzione:\n\n• '+warnings.join('\n• ')+'\n\nVuoi continuare e procedere comunque?');
+  }
   return true;
 }
 
