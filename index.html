@@ -470,7 +470,7 @@ function arrow(ctx,x1,y1,x2,y2){ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,
 
 /* ---------- CATEGORIE TIPOLOGIA ---------- */
 function getCategoryForType(tipo) {
-  if (!tipo) return 'serramento';
+  if (!tipo) return 'seleziona';
   const ferro = ['Cancello battente', 'Cancello scorrevole', 'Grata/Inferriata', 'Porta in ferro', 'Ringhiera/Parapetto', 'Copertura/Tettoia', 'Lattoneria'];
   const varie = ['Altro', 'Carter', 'Elementi particolari', 'Riparazioni', 'Zanzariera', 'Tapparella', 'Cassonetto', 'Serranda', 'Tenda da sole', 'Mobile/Copricaldaia', 'Controtelaio'];
   if (ferro.includes(tipo)) return 'ferro_esterno';
@@ -482,7 +482,7 @@ function getCategoryForType(tipo) {
 let state=normalize(load())||newRilievo();
 function newRilievo(){return{cliente:'',tel:'',email:'',wa:false,tg:false,via:'',citofono:'',tipoCliente:'privato',referente:'',
   cantiereDiverso:false,viaCantiere:'',lat:null,lng:null,latCantiere:null,lngCantiere:null,
-  data:todayISO(),rilevatore:'',destType:'lead',destCommessa:'',items:[blankItem()]};}
+  data:todayISO(),rilevatore:'',destType:'lead',destCommessa:'',items:[]};}
 function blankItem(){return{pos:'',tipologia:'',serie:'',colore:'',vetri:'',telaio:'',apertura:'',
   hmaniglia:'',L:'',H:'',PZ:'1',nota:'',cassonetto:'no',_confirm:true,
   cas:{L:'',H:'',P:'',tipo:'',note:'',foto:[],disegno:null},
@@ -574,7 +574,71 @@ function renderItems(){
       '<datalist id="dl_'+k+'">'+dlOpts(OPZIONI[k])+'</datalist>').join('');document.body.appendChild(d);}
   state.items.forEach((it,i)=>{
     const el=document.createElement('div');el.className='item'+(it._confirm===false?' toconfirm':'');
-    const casOn=it.cassonetto==='si';
+    const cat = getCategoryForType(it.tipologia);
+    const casOn = it.cassonetto==='si' && cat === 'serramento';
+    
+    let subFieldsHtml = '';
+    if (cat === 'seleziona') {
+      subFieldsHtml = `
+        <div style="margin-top:12px;padding:14px;background:var(--df-light);border-radius:10px;text-align:center;color:var(--df-blue);font-size:14px;font-weight:600;border:1px dashed var(--line)">
+          👉 Seleziona una Tipologia per compilare le misure e i dettagli.
+        </div>
+      `;
+    } else {
+      subFieldsHtml = `
+        <div class="grid meas g3" style="margin-top:10px">
+          <div><label>L (mm) ${cat === 'varie' ? '<span style="font-weight:400;color:var(--muted)">(facoltativo)</span>' : '<span class="req">*</span>'}</label><input data-f="L" data-i="${i}" value="${esc(it.L)}" inputmode="numeric"></div>
+          <div><label>H (mm) ${cat === 'varie' ? '<span style="font-weight:400;color:var(--muted)">(facoltativo)</span>' : '<span class="req">*</span>'}</label><input data-f="H" data-i="${i}" value="${esc(it.H)}" inputmode="numeric"></div>
+          <div><label>PZ <span class="req">*</span></label><input data-f="PZ" data-i="${i}" value="${esc(it.PZ)}" inputmode="numeric"></div></div>
+        
+        ${(() => {
+          if (cat === 'serramento') {
+            return `
+              <div class="grid g2" style="margin-top:10px">
+                ${field(it,i,'serie','Serie / Materiale','dl',1)}
+                ${field(it,i,'colore','Colore','dl',1)}
+                ${field(it,i,'vetri','Vetri','dl',1)}
+                ${field(it,i,'telaio','Telaio','dl',1)}
+                ${field(it,i,'apertura','Apertura','dl',1)}
+                <div><label>H maniglia <span class="req">*</span></label><input data-f="hmaniglia" data-i="${i}" value="${esc(it.hmaniglia)}" placeholder="cm da terra"></div>
+              </div>
+              <div class="grid g2" style="margin-top:10px">
+                <div><label>Cassonetto <span class="req">*</span></label>
+                  <select data-f="cassonetto" data-i="${i}"><option value="no"${casOn?'':' selected'}>No</option><option value="si"${casOn?' selected':''}>Sì</option></select></div>
+              </div>
+              ${casOn?casBlock(it,i):''}
+            `;
+          } else if (cat === 'ferro_esterno') {
+            const showApertura = ['Cancello battente', 'Cancello scorrevole', 'Grata/Inferriata', 'Porta in ferro'].includes(it.tipologia);
+            return `
+              <div class="grid g2" style="margin-top:10px">
+                ${field(it,i,'serie','Serie / Materiale','dl',1)}
+                ${field(it,i,'colore','Colore','dl',1)}
+                ${showApertura ? field(it,i,'apertura','Apertura','dl',0) : ''}
+              </div>
+            `;
+          } else {
+            // varie / riparazioni
+            return `
+              <div class="grid g2" style="margin-top:10px">
+                ${field(it,i,'serie','Serie / Materiale (facoltativo)','dl',0)}
+                ${field(it,i,'colore','Colore (facoltativo)','dl',0)}
+              </div>
+            `;
+          }
+        })()}
+        
+        <div style="margin-top:10px"><label>Nota ${cat === 'varie' ? '<span class="req">*</span>' : ''}</label>
+          <textarea data-f="nota" data-i="${i}" placeholder="Annotazioni per produzione/montaggio…">${esc(it.nota)}</textarea></div>
+        <div class="medialabel">✏️ Disegno della posizione <span class="req">*</span></div>
+        <div class="thumbs">${mediaThumb(it.disegno,'disegno',i)}</div>
+        <div class="medialabel">📷 Foto <span class="req">*</span> (puoi annotarle)</div>
+        <div class="thumbs" id="foto${i}">
+          ${it.foto.map((m,j)=>'<div class="thumb" data-act="editfoto" data-i="'+i+'" data-j="'+j+'"><img src="'+m.img+'"><button class="x" data-act="delfoto" data-i="'+i+'" data-j="'+j+'">✕</button></div>').join('')}
+          <div class="thumb empty" data-act="addfoto" data-i="${i}"><span class="big">＋</span>Aggiungi foto</div></div>
+      `;
+    }
+
     el.innerHTML=`
       ${it._confirm===false?`<div class="confirmbar">⚠️ Posizione duplicata: verifica e correggi i campi diversi, poi conferma. <button data-act="confirm" data-i="${i}">✓ Conferma posizione</button></div>`:''}
       <div class="ihead"><span class="badge">Posizione ${i+1}</span>
@@ -584,58 +648,8 @@ function renderItems(){
       <div class="grid g2">
         ${field(it,i,'pos','Posizione (locale)','dl',1)}
         ${field(it,i,'tipologia','Tipologia','dl',1)}</div>
-      
-      <div class="grid meas g3" style="margin-top:10px">
-        <div><label>L (mm) ${getCategoryForType(it.tipologia) === 'varie' ? '<span style="font-weight:400;color:var(--muted)">(facoltativo)</span>' : '<span class="req">*</span>'}</label><input data-f="L" data-i="${i}" value="${esc(it.L)}" inputmode="numeric"></div>
-        <div><label>H (mm) ${getCategoryForType(it.tipologia) === 'varie' ? '<span style="font-weight:400;color:var(--muted)">(facoltativo)</span>' : '<span class="req">*</span>'}</label><input data-f="H" data-i="${i}" value="${esc(it.H)}" inputmode="numeric"></div>
-        <div><label>PZ <span class="req">*</span></label><input data-f="PZ" data-i="${i}" value="${esc(it.PZ)}" inputmode="numeric"></div></div>
-      
-      ${(() => {
-        const cat = getCategoryForType(it.tipologia);
-        if (cat === 'serramento') {
-          return `
-            <div class="grid g2" style="margin-top:10px">
-              ${field(it,i,'serie','Serie / Materiale','dl',1)}
-              ${field(it,i,'colore','Colore','dl',1)}
-              ${field(it,i,'vetri','Vetri','dl',1)}
-              ${field(it,i,'telaio','Telaio','dl',1)}
-              ${field(it,i,'apertura','Apertura','dl',1)}
-              <div><label>H maniglia <span class="req">*</span></label><input data-f="hmaniglia" data-i="${i}" value="${esc(it.hmaniglia)}" placeholder="cm da terra"></div>
-            </div>
-            <div class="grid g2" style="margin-top:10px">
-              <div><label>Cassonetto <span class="req">*</span></label>
-                <select data-f="cassonetto" data-i="${i}"><option value="no"${casOn?'':' selected'}>No</option><option value="si"${casOn?' selected':''}>Sì</option></select></div>
-            </div>
-            ${casOn?casBlock(it,i):''}
-          `;
-        } else if (cat === 'ferro_esterno') {
-          const showApertura = ['Cancello battente', 'Cancello scorrevole', 'Grata/Inferriata', 'Porta in ferro'].includes(it.tipologia);
-          return `
-            <div class="grid g2" style="margin-top:10px">
-              ${field(it,i,'serie','Serie / Materiale','dl',1)}
-              ${field(it,i,'colore','Colore','dl',1)}
-              ${showApertura ? field(it,i,'apertura','Apertura','dl',0) : ''}
-            </div>
-          `;
-        } else {
-          // varie / riparazioni
-          return `
-            <div class="grid g2" style="margin-top:10px">
-              ${field(it,i,'serie','Serie / Materiale (facoltativo)','dl',0)}
-              ${field(it,i,'colore','Colore (facoltativo)','dl',0)}
-            </div>
-          `;
-        }
-      })()}
-      
-      <div style="margin-top:10px"><label>Nota ${getCategoryForType(it.tipologia) === 'varie' ? '<span class="req">*</span>' : ''}</label>
-        <textarea data-f="nota" data-i="${i}" placeholder="Annotazioni per produzione/montaggio…">${esc(it.nota)}</textarea></div>
-      <div class="medialabel">✏️ Disegno della posizione <span class="req">*</span></div>
-      <div class="thumbs">${mediaThumb(it.disegno,'disegno',i)}</div>
-      <div class="medialabel">📷 Foto <span class="req">*</span> (puoi annotarle)</div>
-      <div class="thumbs" id="foto${i}">
-        ${it.foto.map((m,j)=>'<div class="thumb" data-act="editfoto" data-i="'+i+'" data-j="'+j+'"><img src="'+m.img+'"><button class="x" data-act="delfoto" data-i="'+i+'" data-j="'+j+'">✕</button></div>').join('')}
-        <div class="thumb empty" data-act="addfoto" data-i="${i}"><span class="big">＋</span>Aggiungi foto</div></div>`;
+      ${subFieldsHtml}
+    `;
     box.appendChild(el);
   });
   updateSummary();
@@ -1302,6 +1316,7 @@ document.addEventListener('click',e=>{if(e.target!==c_via_cantiere)document.getE
 function validate(){
   document.querySelectorAll('.missing').forEach(x=>x.classList.remove('missing'));
   const miss=[];let firstEl=null;
+  if(!state.items.length){alert("Aggiungi almeno una posizione prima di salvare o esportare.");return false;}
   const reqH=[['c_cliente','Cliente'],['c_tel','Telefono'],['c_via','Indirizzo'],['c_data','Data'],['c_rilevatore','Rilevatore']];
   if(state.cantiereDiverso){reqH.push(['c_via_cantiere','Indirizzo Cantiere']);}
   reqH.forEach(([id,lab])=>{const el=document.getElementById(id);if(!el.value.trim()){el.classList.add('missing');miss.push(lab);firstEl=firstEl||el;}});
