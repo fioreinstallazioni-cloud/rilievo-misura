@@ -1700,20 +1700,28 @@ document.addEventListener('click', e => {
   if (e.target.classList.contains('dropdown-arrow')) {
     const input = e.target.previousElementSibling;
     if (input && input.tagName === 'INPUT') {
-      input.value = '';
-      input.focus();
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-      input.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-  } else if (e.target.tagName === 'INPUT' && e.target.list) {
-    // Seleziona tutto il testo al clic per facilitare la modifica o visualizzare tutto il datalist
-    setTimeout(() => {
+      const oldVal = input.value;
+      input.setAttribute('data-old-val', oldVal);
+      input.value = ''; // Svuota temporaneamente nel DOM per bypassare il filtro
+      
       try {
-        e.target.setSelectionRange(0, e.target.value.length);
+        input.showPicker();
       } catch (err) {
-        e.target.select();
+        input.focus();
       }
-    }, 50);
+    }
+  }
+});
+
+document.addEventListener('focusout', e => {
+  const t = e.target;
+  if (t.tagName === 'INPUT' && t.getAttribute('data-old-val') !== null) {
+    setTimeout(() => {
+      if (t.value === '') {
+        t.value = t.getAttribute('data-old-val');
+      }
+      t.removeAttribute('data-old-val');
+    }, 150);
   }
 });
 
