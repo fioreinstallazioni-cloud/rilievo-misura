@@ -280,24 +280,7 @@
     </div>
   </div>
 
-  <!-- DESTINAZIONE -->
-  <div class="card">
-    <h2>📁 Destinazione del rilievo</h2>
-    <div class="grid g2">
-      <div><label>Tipo <span class="req">*</span></label>
-        <select id="d_type">
-          <option value="lead">Nuovo cliente → cartella in Lead</option>
-          <option value="commessa">Commessa già confermata</option>
-        </select>
-      </div>
-      <div id="d_commessa_wrap" style="display:none"><label>Commessa esistente <span class="req">*</span></label>
-        <div class="input-with-arrow">
-          <input id="d_commessa" placeholder="Es. C31-Arianna Nocerino" list="dl_commesse">
-          <span class="dropdown-arrow">▼</span>
-        </div></div>
-    </div>
-    <div class="pathline" id="d_path"></div>
-  </div>
+
 
   <div class="summary" id="summary"></div>
   <div id="items"></div>
@@ -370,6 +353,31 @@
     <h3>Scegli un disegno standard</h3>
     <div class="tplgrid" id="tplgrid"></div>
     <button class="ed-btn cancel" id="tplClose" style="margin-top:12px;width:100%">Chiudi</button>
+  </div>
+</div>
+
+<!-- MODALE DESTINAZIONE (Dropbox Upload Wizard) -->
+<div class="cfgmodal" id="destmodal">
+  <div class="cfgbox" style="max-width:480px">
+    <h3 style="margin:0 0 14px;color:var(--df-blue);display:flex;align-items:center;gap:6px">📁 Scegli Destinazione Dropbox</h3>
+    <div class="grid g2">
+      <div><label>Tipo <span class="req">*</span></label>
+        <select id="d_type">
+          <option value="lead">Nuovo cliente → cartella in Lead</option>
+          <option value="commessa">Commessa già confermata</option>
+        </select>
+      </div>
+      <div id="d_commessa_wrap" style="display:none"><label>Commessa esistente <span class="req">*</span></label>
+        <div class="input-with-arrow">
+          <input id="d_commessa" placeholder="Es. C31-Arianna Nocerino" list="dl_commesse">
+          <span class="dropdown-arrow">▼</span>
+        </div></div>
+    </div>
+    <div class="pathline" id="d_path" style="margin-top:12px;padding:12px;background:var(--df-light);border-radius:10px;font-size:12px;border:1px solid var(--line)"></div>
+    <div style="display:flex;gap:8px;margin-top:20px">
+      <button class="act" id="destConfirmUpload" style="flex:1;margin:0">✓ Carica su Dropbox</button>
+      <button class="act sec" id="destClose" style="flex:0 0 100px;margin:0">Annulla</button>
+    </div>
   </div>
 </div>
 
@@ -810,7 +818,24 @@ function toast(msg,ok){const s=document.getElementById('savestate');s.textConten
   s.classList.toggle('err',!ok);s.classList.add('show');setTimeout(()=>s.classList.remove('show'),1800);}
 document.getElementById('newBtn').onclick=()=>{if(confirm('Iniziare un NUOVO rilievo? (quello attuale resta salvato solo se esportato)')){
   state=newRilievo();save();renderHeader();renderItems();}};
-document.getElementById('cloudBtn').onclick=saveToDropbox;
+document.getElementById('cloudBtn').onclick=()=>{
+  if(!validate())return;
+  if(!dbxLinked()){openCfg();toast('Collega prima Dropbox (⚙️)',false);return;}
+  document.getElementById('destmodal').classList.add('open');
+  renderDestPath();
+};
+document.getElementById('destClose').onclick=()=>{
+  document.getElementById('destmodal').classList.remove('open');
+};
+document.getElementById('destConfirmUpload').onclick=async()=>{
+  if(state.destType==='commessa'&&!state.destCommessa.trim()){
+    alert('Seleziona la Commessa esistente');
+    d_commessa.classList.add('missing');
+    return;
+  }
+  document.getElementById('destmodal').classList.remove('open');
+  await saveToDropbox();
+};
 document.getElementById('pdfBtn').onclick=()=>{if(validate()){saveCurrentToRubrica();exportPDF();}};
 
 /* ---------- FOTO (camera/file) ---------- */
@@ -1336,7 +1361,7 @@ function validate(){
   const reqH=[['c_cliente','Cliente'],['c_tel','Telefono'],['c_via','Indirizzo'],['c_data','Data'],['c_rilevatore','Rilevatore']];
   if(state.cantiereDiverso){reqH.push(['c_via_cantiere','Indirizzo Cantiere']);}
   reqH.forEach(([id,lab])=>{const el=document.getElementById(id);if(!el.value.trim()){el.classList.add('missing');miss.push(lab);firstEl=firstEl||el;}});
-  if(state.destType==='commessa'&&!state.destCommessa.trim()){d_commessa.classList.add('missing');miss.push('Commessa');firstEl=firstEl||d_commessa;}
+
   const warnings=[];
   state.items.forEach((it,i)=>{
     if(it._confirm===false)miss.push('Pos.'+(i+1)+': confermare posizione duplicata');
