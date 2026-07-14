@@ -547,11 +547,27 @@ function renderHeader(){
   
   c_data.value=state.data||todayISO();
   c_rilevatore.value=state.rilevatore;d_type.value=state.destType||'lead';d_commessa.value=state.destCommessa||'';
-  if(!document.getElementById('dl_commesse')){const d=document.createElement('div');
-    d.innerHTML='<datalist id="dl_commesse">'+COMMESSE.map(c=>'<option value="'+esc(c)+'">').join('')+'</datalist>';
-    document.body.appendChild(d);}
+  renderCommessaDatalist();
   renderDestPath();
   renderRubricaDatalist();
+}
+function getCommesseList() {
+  try {
+    const list = localStorage.getItem('df_commesse_list');
+    if (list) return JSON.parse(list);
+  } catch (e) {}
+  return COMMESSE;
+}
+function renderCommessaDatalist() {
+  let dl = document.getElementById('dl_commesse');
+  if (!dl) {
+    const div = document.createElement('div');
+    div.innerHTML = '<datalist id="dl_commesse"></datalist>';
+    document.body.appendChild(div);
+    dl = document.getElementById('dl_commesse');
+  }
+  const list = getCommesseList();
+  dl.innerHTML = list.map(c => '<option value="' + esc(c) + '">').join('');
 }
 function destFolderName(){return(state.cliente||'Cliente senza nome').replace(/[\\/:*?"<>|]/g,'-').trim();}
 function destPath(){if(state.destType==='commessa'&&state.destCommessa)return DROPBOX_BASE+'/'+state.destCommessa;
@@ -1490,6 +1506,51 @@ async function dbxUpload(path,blob,token){
     body:blob});
   if(!r.ok)throw new Error('Upload fallito: '+(await r.text()));return r.json();}
 
+async function dbxFetchCommesseList() {
+  if (!dbxLinked()) return;
+  try {
+    const token = await dbxAccessToken();
+    const r = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        path: DROPBOX_BASE,
+        recursive: false,
+        limit: 1000
+      })
+    });
+    if (!r.ok) throw new Error('API status ' + r.status);
+    const d = await r.json();
+    const exclude = ['Lead', 'File Produzione', 'Assistenze installazioni', 'Assistenza'];
+    const folders = (d.entries || [])
+      .filter(e => e['.tag'] === 'folder' && !exclude.includes(e.name) && !e.name.startsWith('---'))
+      .map(e => e.name);
+    
+    // Ordina numericamente decrescente (es: C41, C40, C39, ..., C3)
+    folders.sort((a, b) => {
+      const getNum = s => {
+        const m = s.match(/^C\.?(\d+)/i);
+        return m ? parseInt(m[1], 10) : 0;
+      };
+      const numA = getNum(a);
+      const numB = getNum(b);
+      if (numA !== numB) return numB - numA;
+      return b.localeCompare(a);
+    });
+    
+    if (folders.length) {
+      localStorage.setItem('df_commesse_list', JSON.stringify(folders));
+      renderCommessaDatalist();
+      console.log('Lista commesse aggiornata da Dropbox ✓');
+    }
+  } catch (e) {
+    console.error('Errore nel recuperare la lista commesse da Dropbox:', e);
+  }
+}
+
 /* genera il PDF come Blob (librerie caricate al volo, serve internet) */
 function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');
   s.src=src;s.onload=res;s.onerror=()=>rej(new Error('Impossibile caricare '+src));document.head.appendChild(s);});}
@@ -1684,7 +1745,7 @@ document.getElementById('dbxAuthBtn').onclick=async()=>{
   document.getElementById('dbxStep2').style.display='block';};
 document.getElementById('dbxConfirm').onclick=async()=>{
   const code=document.getElementById('dbxCode').value.trim();if(!code){alert('Incolla il codice');return;}
-  try{await dbxExchangeCode(code);toast('Dropbox collegato ✓',true);openCfg();}
+  try{await dbxExchangeCode(code);toast('Dropbox collegato ✓',true);openCfg();dbxFetchCommesseList();}
   catch(e){alert('Collegamento fallito: '+e.message);}};
 
 /* ---------- UTILS ---------- */
@@ -1727,6 +1788,9 @@ document.addEventListener('focusout', e => {
 
 /* ---------- INIT ---------- */
 renderHeader();renderItems();
+if (dbxLinked()) {
+  dbxFetchCommesseList();
+}
 </script>
 </body>
 </html>
