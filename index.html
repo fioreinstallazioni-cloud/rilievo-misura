@@ -654,9 +654,9 @@ function renderItems(){
         
         <div style="margin-top:10px"><label>Nota ${cat === 'varie' ? '<span class="req">*</span>' : ''}</label>
           <textarea data-f="nota" data-i="${i}" placeholder="Annotazioni per produzione/montaggio…">${esc(it.nota)}</textarea></div>
-        <div class="medialabel">✏️ Disegno della posizione <span class="req">*</span></div>
+        <div class="medialabel">✏️ Disegno della posizione</div>
         <div class="thumbs">${mediaThumb(it.disegno,'disegno',i)}</div>
-        <div class="medialabel">📷 Foto <span class="req">*</span> (puoi annotarle)</div>
+        <div class="medialabel">📷 Foto (puoi annotarle)</div>
         <div class="thumbs" id="foto${i}">
           ${it.foto.map((m,j)=>'<div class="thumb" data-act="editfoto" data-i="'+i+'" data-j="'+j+'"><img src="'+m.img+'"><button class="x" data-act="delfoto" data-i="'+i+'" data-j="'+j+'">✕</button></div>').join('')}
           <div class="thumb empty" data-act="addfoto" data-i="${i}"><span class="big">＋</span>Aggiungi foto</div></div>
@@ -1384,7 +1384,7 @@ function validate(){
       if(el)el.classList.add('missing');miss.push('Pos.'+(i+1)+': '+f);firstEl=firstEl||el;}});
     
     if(!it.disegno||!it.disegno.img)warnings.push('Pos.'+(i+1)+': manca il disegno');
-    if(!it.foto.length)miss.push('Pos.'+(i+1)+': almeno 1 foto');
+    if(!it.foto.length)warnings.push('Pos.'+(i+1)+': manca la foto');
     if(cat === 'serramento' && it.cassonetto==='si'){['L','H','P','tipo'].forEach(f=>{if(!String(it.cas[f]).trim()){
       const el=document.querySelector('[data-cf="'+f+'"][data-i="'+i+'"]');if(el)el.classList.add('missing');
       miss.push('Pos.'+(i+1)+' cassonetto: '+f);firstEl=firstEl||el;}});}
