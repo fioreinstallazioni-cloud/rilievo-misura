@@ -157,19 +157,73 @@
   .seg-btn{flex:1;border:none;background:none;font-size:14px;font-weight:700;padding:8px;border-radius:8px;cursor:pointer;color:var(--muted);transition:all .2s}
   .seg-btn.active{background:#fff;color:var(--df-blue);box-shadow:0 2px 6px rgba(0,0,0,0.08)}
   
-  /* Arrow indicator per i menu a tendina */
+  /* Arrow indicator e Menu a tendina custom */
   .input-with-arrow { position: relative; display: block; }
-  .input-with-arrow input { padding-right: 30px !important; }
+  .input-with-arrow input { padding-right: 36px !important; }
   .input-with-arrow .dropdown-arrow {
     position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 10px;
-    color: var(--muted);
+    right: 1px;
+    top: 1px;
+    bottom: 1px;
+    width: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: var(--df-blue);
     cursor: pointer;
+    user-select: none;
+    border-radius: 0 9px 9px 0;
     z-index: 10;
+    transition: background .15s;
   }
+  .input-with-arrow .dropdown-arrow:hover {
+    background: var(--df-light);
+  }
+  .custom-dd-menu {
+    position: absolute;
+    top: calc(100% + 3px);
+    left: 0;
+    right: 0;
+    z-index: 95;
+    background: #fff;
+    border: 1px solid var(--df-blue);
+    border-radius: 10px;
+    max-height: 240px;
+    overflow-y: auto;
+    box-shadow: 0 8px 24px rgba(20,40,80,.18);
+    display: none;
+  }
+  .custom-dd-menu.open { display: block; }
+  .custom-dd-item {
+    padding: 10px 12px;
+    font-size: 14px;
+    color: var(--ink);
+    border-bottom: 1px solid #f0f2f6;
+    cursor: pointer;
+  }
+  .custom-dd-item:last-child { border-bottom: none; }
+  .custom-dd-item:hover, .custom-dd-item:active {
+    background: var(--df-light);
+    color: var(--df-blue);
+    font-weight: 600;
+  }
+  .custom-dd-item.selected {
+    background: #e7f0fd;
+    color: var(--df-blue);
+    font-weight: 700;
+  }
+
+  /* Pill checkboxes per opzioni posizione */
+  .opt-checks { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .chk-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 11px; border: 1px solid var(--line); border-radius: 9px;
+    background: #fafbfd; font-size: 13px; font-weight: 600; color: var(--ink);
+    cursor: pointer; user-select: none; margin: 0;
+  }
+  .chk-pill input[type=checkbox] { width: 17px; height: 17px; margin: 0; cursor: pointer; }
+  .chk-pill.on { background: var(--df-light); border-color: var(--df-blue); color: var(--df-blue); }
   
 
 
@@ -358,7 +412,7 @@
 
 <!-- MODALE DESTINAZIONE (Dropbox Upload Wizard) -->
 <div class="cfgmodal" id="destmodal">
-  <div class="cfgbox" style="max-width:480px">
+  <div class="cfgbox" style="max-width:480px;overflow:visible">
     <h3 style="margin:0 0 14px;color:var(--df-blue);display:flex;align-items:center;gap:6px">📁 Scegli Destinazione Dropbox</h3>
     <div class="grid g2">
       <div><label>Tipo <span class="req">*</span></label>
@@ -367,11 +421,17 @@
           <option value="commessa">Commessa già confermata</option>
         </select>
       </div>
-      <div id="d_commessa_wrap" style="display:none"><label>Commessa esistente <span class="req">*</span></label>
+      <div id="d_commessa_wrap" style="display:none">
+        <label style="display:flex;align-items:center;justify-content:space-between">
+          <span>Commessa esistente <span class="req">*</span></span>
+          <button type="button" id="refreshCommesseBtn" style="border:none;background:none;color:var(--df-blue);font-size:11px;font-weight:700;cursor:pointer;padding:0">🔄 Aggiorna</button>
+        </label>
         <div class="input-with-arrow">
-          <input id="d_commessa" placeholder="Es. C31-Arianna Nocerino" list="dl_commesse">
-          <span class="dropdown-arrow">▼</span>
-        </div></div>
+          <input id="d_commessa" data-list="commesse" placeholder="Es. C46-Mes group" autocomplete="off">
+          <span class="dropdown-arrow" title="Mostra tutte le commesse">▼</span>
+          <div class="custom-dd-menu"></div>
+        </div>
+      </div>
     </div>
     <div class="pathline" id="d_path" style="margin-top:12px;padding:12px;background:var(--df-light);border-radius:10px;font-size:12px;border:1px solid var(--line)"></div>
     <div style="display:flex;gap:8px;margin-top:20px">
@@ -416,29 +476,69 @@
    ============================================================ */
 const STORE_KEY='df_rilievo_v2';
 const DROPBOX_BASE='/Ufficio/COMMESSE/Commesse Installazioni 2026';
-const COMMESSE=['C3 Mes - Cancello Capannone Nuovo','C8 Mes - Porte in Ferro pallazzo',
-  'C.26 Vincenzo Palmieri','C29-Condominio c.Garibaldi 174','C30-Luigi Folletto zanzariere',
-  'C31-Arianna Nocerino','C32-Condominio Poggioreale','C33-Flomar-Maddaloni',
-  'C34-Caruso Geometra','C35-Tecno3-Telai','C36-Top solutions-Mobiletto','C37-C.I.A-Supporti strutturali'];
+const COMMESSE=[
+  'C46-Mes group','C45-Tonino Russo','C44-Teatro Bracco','C42-Federica Riccardi',
+  'C41-Gargiulo Carlo','C40-Condominio Via Monte Faito 23 25','C39-Top Solution Rif. Controtelai',
+  'C38-Top Solution Rif. Ramondo','C37-C.I.A-Supporti strutturali','C36-Top solutions-Mobiletto',
+  'C35-Tecno3-Telai','C34-Caruso Geometra','C33-Flomar-Maddaloni','C32-Condominio Poggioreale',
+  'C31-Arianna Nocerino','C30-Luigi Folletto zanzariere','C29-Condominio c.Garibaldi 174',
+  'C.26 Vincenzo Palmieri','C8 Mes - Porte in Ferro pallazzo','C3 Mes - Cancello Capannone Nuovo'
+];
 
-/* Catalogo reale (dalla skill preventivi-fatture-fiore) */
+/* Catalogo reale personalizzato DF Fiore Installazioni */
 const OPZIONI={
-  tipologia:['Finestra','Portafinestra','Scorrevole','Veranda','Persiana','Tapparella','Cassonetto',
-    'Zanzariera','Cancello battente','Cancello scorrevole','Grata/Inferriata','Porta in ferro','Portone',
-    'Vetrata fissa','Copertura/Tettoia','Ringhiera/Parapetto','Porta blindata','Controtelaio','Serranda',
-    'Tenda da sole','Mobile/Copricaldaia','Lattoneria','Carter','Elementi particolari','Riparazioni','Altro'],
-  serie:['Alluminio freddo MAR45','Alluminio termico MAR73HTi','Scorrevole freddo MAS60',
+  tipologia:[
+    'Infissi in alluminio','Finestra','Portafinestra','Scorrevole',
+    'Mobili in alluminio','Veranda','Cassonetto',
+    'Porta blindata','Porta in ferro','Portone palazzo','Sportello in alluminio',
+    'Cancello','Cancello battente','Cancello scorrevole',
+    'Persiana in ferro','Persiana in alluminio',
+    'Grata/Inferriata','Ringhiera/Parapetto','Copertura/Tettoia','Lattoneria',
+    'Tapparella','Zanzariera','Serranda','Tenda da sole',
+    'Mobile/Copricaldaia','Controtelaio','Carter/Grondaia','Riparazioni','Altro'
+  ],
+  serie:[
+    'Alluminio freddo MAR45','Alluminio termico MAR73HTi','Scorrevole freddo MAS60',
     'Scorrevole termico MAS65TT','Persiana MAR45 SP54','Ferro zincato','Ferro zincato e verniciato',
-    'PVC','Alluminio coibentato'],
-  colore:['RAL 9010 Bianco','RAL 1013 Avorio','RAL 8017 Marrone','RAL 6005 Verde','RAL 9005 Nero',
-    'RAL 7016 Grigio antracite','Grigio raffaello','Marrone raffaello','Alluminio anodizzato',
-    'Effetto legno Noce','Effetto legno Ciliegio','Effetto legno Rovere'],
-  vetri:['Vetrocamera 4/12/4 standard','Basso emissivo','Satinato','Stratificato/Antinfortunio','Acustico','Triplo vetro'],
-  telaio:['Su controtelaio esistente','Nuovo controtelaio singolo','Nuovo controtelaio doppio','A muro',
-    'Distanziale a C 100mm','Distanziale a C 120mm','Falso telaio'],
-  apertura:['1 anta DX','1 anta SX','2 ante','Anta-ribalta DX','Anta-ribalta SX','2 ante + ribalta','Fisso','Scorrevole','Vasistas'],
-  casTipo:['Tradizionale','Cilindro'],
-  pos:['Cucina','Soggiorno','Camera 1','Camera 2','Camera 3','Bagno','Bagno 2','Ingresso','Studio','Ripostiglio','Garage','Cantina','Mansarda','Balcone','Terrazzo']
+    'PVC','Alluminio coibentato','Jolly','A molla','Lamiera coibentata'
+  ],
+  colore:[
+    'RAL 9010 Bianco','RAL 1013 Avorio','RAL 8017 Marrone','RAL 6005 Verde','RAL 9005 Nero',
+    'RAL 7016 Grigio antracite','Grigio raffaello','Grigio grafite','Marrone raffaello','Alluminio anodizzato',
+    'Effetto legno Noce','Effetto legno Ciliegio','Effetto legno Rovere','Grezzo'
+  ],
+  vetri:[
+    'Vetrocamera 4/12/4 standard','Vetrocamera 4/12/4C','Basso emissivo','Satinato',
+    'Stratificato/Antinfortunio','Acustico','Triplo vetro','Pannello cieco','Lamiera','Senza vetro'
+  ],
+  telaio:[
+    'Su controtelaio esistente','Nuovo controtelaio singolo','Nuovo controtelaio doppio','A muro',
+    'L','Z','Z con falda da 40','Z con falda da 50','T ai quattro lati','Z esterno L interno',
+    'Distanziale a C 100mm','Distanziale a C 120mm','Falso telaio'
+  ],
+  apertura:[
+    '1 anta DX','1 anta SX','2 ante','3 ante','Anta-ribalta DX','Anta-ribalta SX','2 ante + ribalta',
+    'Spingere DX','Spingere SX','Tirare DX','Tirare SX','Fisso','Scorrevole','Vasistas'
+  ],
+  modelloPorta:[
+    '1 anta','2 ante','2 ante asimmetriche',
+    '1 anta + sopralluce','2 ante + sopralluce','2 ante asimmetriche + sopralluce',
+    '1 anta + 1 laterale fisso','2 ante + 1 laterale fisso','2 ante asimmetriche + 1 laterale fisso',
+    '1 anta + 2 laterali fissi','2 ante + 2 laterali fissi','2 ante asimmetriche + 2 laterali fissi',
+    '1 anta + sopralluce + laterale fisso','2 ante + sopralluce + 2 laterali fissi'
+  ],
+  modelloSerratura:[
+    'Cilindro europeo','Elettrica','Doppia mappa','Solo mandate',
+    'A fascia','A montante','Esterna','Multipunto','Maniglione antipanico'
+  ],
+  tipoDefender:['Standard','Magnetico','Antishock / Monoblocco','Nessuno'],
+  spioncino:['Standard','Elettronico','Standard Bicolore','Elettronico Bicolore','Nessuno'],
+  tipoFissaggio:['Tasselli chimici','Tasselli meccanici','Zanche a murare','Saldatura su controtelaio','Viti su telaio'],
+  manigliaPortone:['Maniglia','Maniglione','Pomello','Nessuna'],
+  tipoManiglia:['Standard in tinta','Cromo satinato','Ottone / Oro','Nera','Maniglia a incasso','Pomello'],
+  casTipo:['Tradizionale','Cilindro','Coibentato','Monoblocco'],
+  casManovra:['Cinghia','Motore','Arganello'],
+  pos:['Cucina','Soggiorno','Salone','Camera 1','Camera 2','Camera 3','Stanzetta','Bagno','Bagno 2','Ingresso','Porta principale','Portone principale','Studio','Ripostiglio','Garage','Cantina','Mansarda','Balcone','Terrazzo','Scala']
 };
 
 /* ---------- DISEGNI STANDARD (template) ---------- */
@@ -476,13 +576,29 @@ function arrow(ctx,x1,y1,x2,y2){ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,
   ctx.lineTo(x2-s*Math.cos(a-0.4),y2-s*Math.sin(a-0.4));ctx.moveTo(x2,y2);
   ctx.lineTo(x2-s*Math.cos(a+0.4),y2-s*Math.sin(a+0.4));ctx.stroke();}
 
-/* ---------- CATEGORIE TIPOLOGIA ---------- */
+/* ---------- CATEGORIE TIPOLOGIA (Intelligente & Case-Insensitive) ---------- */
 function getCategoryForType(tipo) {
-  if (!tipo) return 'seleziona';
-  const ferro = ['Cancello battente', 'Cancello scorrevole', 'Grata/Inferriata', 'Porta in ferro', 'Ringhiera/Parapetto', 'Copertura/Tettoia', 'Lattoneria'];
-  const varie = ['Altro', 'Carter', 'Elementi particolari', 'Riparazioni', 'Zanzariera', 'Tapparella', 'Cassonetto', 'Serranda', 'Tenda da sole', 'Mobile/Copricaldaia', 'Controtelaio'];
-  if (ferro.includes(tipo)) return 'ferro_esterno';
-  if (varie.includes(tipo)) return 'varie';
+  const t = (tipo || '').trim().toLowerCase();
+  if (!t) return 'seleziona';
+  if (t.includes('riparaz') || t === 'altro' || t.includes('carter') || t.includes('grondaia') ||
+      t.includes('lattoneria') || t === 'controtelaio' || t.includes('elementi particolari') ||
+      t.includes('serratura') || t.includes('assistenza') || t.includes('modifica')) {
+    return 'varie';
+  }
+  if (t === 'cassonetto') return 'cassonetto_solo';
+  if (t.includes('mobili in alluminio') || t.includes('mobile') || t.includes('copricaldaia')) return 'mobili_alluminio';
+  if (t.includes('sportello')) return 'sportello_alluminio';
+  if (t.includes('veranda')) return 'veranda';
+  if (t.includes('blindat')) return 'porta_blindata';
+  if (t.includes('portone')) return 'portone_palazzo';
+  if (t.includes('porta in ferro') || (t.includes('porta') && t.includes('ferro'))) return 'porta_ferro';
+  if (t.includes('zanzarier') || t.includes('tapparell') || t.includes('serranda') || t.includes('tenda') || t.includes('persian')) {
+    return 'accessori';
+  }
+  if (t.includes('cancello') || t.includes('grata') || t.includes('inferriat') || t.includes('griglia') ||
+      t.includes('ringhier') || t.includes('parapett') || t.includes('copertura') || t.includes('tettoia')) {
+    return 'ferro_esterno';
+  }
   return 'serramento';
 }
 
@@ -491,27 +607,54 @@ let state=normalize(load())||newRilievo();
 function newRilievo(){return{cliente:'',tel:'',email:'',wa:false,tg:false,via:'',citofono:'',tipoCliente:'privato',referente:'',
   cantiereDiverso:false,viaCantiere:'',lat:null,lng:null,latCantiere:null,lngCantiere:null,
   data:todayISO(),rilevatore:'',destType:'lead',destCommessa:'',items:[]};}
-function blankItem(){return{pos:'',tipologia:'',serie:'',colore:'',vetri:'',telaio:'',apertura:'',
-  hmaniglia:'',L:'',H:'',PZ:'1',nota:'',cassonetto:'no',_confirm:true,
-  cas:{L:'',H:'',P:'',tipo:'',note:'',foto:[],disegno:null},
-  foto:[],disegno:null};}
+function blankItem(){return{
+  pos:'',tipologia:'',serie:'',colore:'',vetri:'',telaio:'',apertura:'',
+  hmaniglia:'',L:'',H:'',P:'',PZ:'1',nota:'',cassonetto:'no',_confirm:true,
+  soloRiparazione:false,
+  misuraLuce:false,L_luce:'',H_luce:'',
+  controtelaio:false,coprifili:false,
+  // Mobili / Veranda
+  tipoManiglia:'',mensole:'',fondo:'no',tetto:'no',anteNoSim:'',hRinghiera:'',
+  anteSimmetriche:'si',sopralluceTipo:'nessuno',sopralluceH:'',sottoluceH:'',
+  // Porte Blindate / Porte in ferro / Portone Palazzo / Sportello
+  modelloPorta:'',modelloSerratura:'',tipoDefender:'',coloreFerramenta:'',
+  ferramentaDiversa:false,coloreFerrInt:'',coloreFerrEst:'',
+  pannelloEst:false,pannelloEstColore:'',pannelloEstSpessore:'',
+  pannelloInt:false,pannelloIntColore:'',pannelloIntSpessore:'',
+  spioncino:'',tipoFissaggio:'',
+  chiusuraSuppl:false,doppiaSerratura:false,chiudiportaAereo:false,
+  manigliaInt:'',manigliaEst:'',numChiavi:'',
+  decorazioneVetriIndirizzo:false,pulsantieraCitofono:false,serraturaChiave:false,
+  cas:{L:'',L_spigoli:'',L_infisso:'',H:'',P:'',P_dx:'',P_sx:'',tipo:'',manovra:'',note:'',foto:[],disegno:null},
+  foto:[],disegno:null
+};}
 /* normalizza dati salvati da versioni precedenti */
 function normalize(s){if(!s)return s;
   if(s.email===undefined)s.email='';
   if(s.wa===undefined)s.wa=false;
   if(s.tg===undefined)s.tg=false;
-  if(s.citofono===undefined)s.citofono='';
+  if(s.citofono===undefined)s.citofono=s.vianote||'';
   if(s.tipoCliente===undefined)s.tipoCliente='privato';
   if(s.referente===undefined)s.referente='';
   if(s.cantiereDiverso===undefined)s.cantiereDiverso=false;
   if(s.viaCantiere===undefined)s.viaCantiere='';
   if(s.latCantiere===undefined)s.latCantiere=null;
   if(s.lngCantiere===undefined)s.lngCantiere=null;
+  const def = blankItem();
   (s.items||[]).forEach(it=>{
-  if(!Array.isArray(it.foto))it.foto=it.foto?[it.foto]:[];
-  if(it._confirm===undefined)it._confirm=true;
-  if(!it.cas)it.cas={L:'',H:'',P:'',tipo:'',note:'',foto:[],disegno:null};
-  if(!Array.isArray(it.cas.foto))it.cas.foto=it.cas.foto?[it.cas.foto]:[];});return s;}
+    Object.keys(def).forEach(k=>{if(it[k]===undefined)it[k]=JSON.parse(JSON.stringify(def[k]));});
+    if(!Array.isArray(it.foto))it.foto=it.foto?[it.foto]:[];
+    if(it._confirm===undefined)it._confirm=true;
+    if(!it.cas)it.cas=JSON.parse(JSON.stringify(def.cas));
+    else {
+      Object.keys(def.cas).forEach(ck=>{if(it.cas[ck]===undefined)it.cas[ck]=def.cas[ck];});
+      // migrazione automatica vecchie misure cassonetto L e P
+      if(!it.cas.L_spigoli && it.cas.L) it.cas.L_spigoli = it.cas.L;
+      if(!it.cas.P_dx && it.cas.P) it.cas.P_dx = it.cas.P;
+    }
+    if(!Array.isArray(it.cas.foto))it.cas.foto=it.cas.foto?[it.cas.foto]:[];
+  });
+  return s;}
 function todayISO(){const d=new Date();const z=n=>String(n).padStart(2,'0');
   return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate());}
 
@@ -523,25 +666,13 @@ function renderHeader(){
   c_tg.checked=!!state.tg;
   c_via.value=state.via;
   c_citofono.value=state.citofono||'';
-  
-  const tc = state.tipoCliente || 'privato';
-  document.getElementById('btn_privato').classList.toggle('active', tc === 'privato');
-  document.getElementById('btn_azienda').classList.toggle('active', tc === 'azienda');
-  document.getElementById('btn_rivenditore').classList.toggle('active', tc === 'rivenditore');
-  
-  const refWrap = document.getElementById('referente_wrap');
-  const refLabel = refWrap.querySelector('label');
-  if (tc === 'azienda') {
-    refWrap.style.display = 'block';
-    refLabel.textContent = 'Referente / Contatto';
-    c_referente.placeholder = 'Es. referente ditta';
-  } else if (tc === 'rivenditore') {
-    refWrap.style.display = 'block';
-    refLabel.textContent = 'Riferimento Cliente Finale';
-    c_referente.placeholder = 'Es. nome cliente del rivenditore';
+  if (state.lat && state.lng) {
+    document.getElementById('gpsHint').innerHTML = `✓ <a href="https://maps.google.com/?q=${state.lat},${state.lng}" target="_blank">apri in mappa</a>`;
   } else {
-    refWrap.style.display = 'none';
+    document.getElementById('gpsHint').innerHTML = '';
   }
+  
+  updateTipoClienteUI();
   c_referente.value = state.referente || '';
   
   c_cantiere_diverso.checked = !!state.cantiereDiverso;
@@ -562,7 +693,10 @@ function renderHeader(){
 function getCommesseList() {
   try {
     const list = localStorage.getItem('df_commesse_list');
-    if (list) return JSON.parse(list);
+    if (list) {
+      const parsed = JSON.parse(list);
+      if (Array.isArray(parsed) && parsed.length) return parsed;
+    }
   } catch (e) {}
   return COMMESSE;
 }
@@ -583,86 +717,302 @@ function destPath(){if(state.destType==='commessa'&&state.destCommessa)return DR
 function renderDestPath(){document.getElementById('d_commessa_wrap').style.display=state.destType==='commessa'?'block':'none';
   document.getElementById('d_path').innerHTML='Il PDF verrà salvato in:<br><b>'+esc(destPath())+'/</b>';}
 
-/* ---------- ITEMS ---------- */
-function dlOpts(arr){return arr.map(o=>'<option value="'+esc(o)+'">').join('');}
-function field(it,i,f,label,list,req){
-  const inputHtml = '<input data-f="'+f+'" data-i="'+i+'" value="'+esc(it[f])+'"'+(list?' list="dl_'+f+'"':'')+'>';
-  const arrowHtml = list ? '<span class="dropdown-arrow">▼</span>' : '';
-  const wrappedInput = list ? '<div class="input-with-arrow">'+inputHtml+arrowHtml+'</div>' : inputHtml;
+/* ---------- ITEMS & SCHEDE DINAMICHE ---------- */
+function field(it,i,f,label,listKey,req,placeholder=''){
+  const listAttr = listKey ? ' data-list="'+(listKey==='dl'?f:listKey)+'" autocomplete="off"' : '';
+  const phAttr = placeholder ? ' placeholder="'+esc(placeholder)+'"' : '';
+  const inputHtml = '<input data-f="'+f+'" data-i="'+i+'" value="'+esc(it[f])+'"'+listAttr+phAttr+'>';
+  if (!listKey) return '<div><label>'+label+(req?' <span class="req">*</span>':'')+'</label>'+inputHtml+'</div>';
+  const wrappedInput = '<div class="input-with-arrow">'+inputHtml+'<span class="dropdown-arrow" title="Mostra tutta la lista">▼</span><div class="custom-dd-menu"></div></div>';
   return '<div><label>'+label+(req?' <span class="req">*</span>':'')+'</label>'+wrappedInput+'</div>';
 }
+function chkField(it,i,f,label){
+  const on = !!it[f];
+  return `<label class="chk-pill${on?' on':''}"><input type="checkbox" data-fchk="${f}" data-i="${i}"${on?' checked':''}>${label}</label>`;
+}
+
+function renderSubFields(it, i) {
+  const cat = getCategoryForType(it.tipologia);
+  if (cat === 'seleziona') {
+    return `
+      <div style="margin-top:12px;padding:14px;background:var(--df-light);border-radius:10px;text-align:center;color:var(--df-blue);font-size:14px;font-weight:600;border:1px dashed var(--line)">
+        👉 Seleziona o scrivi una Tipologia per compilare le misure e i dettagli.
+      </div>
+    `;
+  }
+
+  const isOpt = cat === 'varie' || !!it.soloRiparazione;
+  const reqStar = isOpt ? '<span style="font-weight:400;color:var(--muted)">(facolt.)</span>' : '<span class="req">*</span>';
+  const rFlag = isOpt ? 0 : 1;
+  const hasDepth = ['mobili_alluminio', 'veranda', 'sportello_alluminio'].includes(cat);
+  const reqDepth = (cat === 'mobili_alluminio' && !isOpt);
+
+  // Blocco Misure principali (se non è Cassonetto singolo che ha le sue misure dedicate)
+  let measHtml = '';
+  if (cat === 'cassonetto_solo') {
+    measHtml = `
+      <div class="grid meas g3" style="margin-top:10px">
+        <div><label>L Spigoli (mm) ${reqStar}</label><input data-cf="L_spigoli" data-i="${i}" value="${esc(it.cas.L_spigoli||it.cas.L)}" inputmode="numeric"></div>
+        <div><label>L Infisso (mm) ${reqStar}</label><input data-cf="L_infisso" data-i="${i}" value="${esc(it.cas.L_infisso)}" inputmode="numeric"></div>
+        <div><label>Alt. H (mm) ${reqStar}</label><input data-cf="H" data-i="${i}" value="${esc(it.cas.H||it.H)}" inputmode="numeric"></div>
+      </div>
+      <div class="grid meas g3" style="margin-top:8px">
+        <div><label>Prof. DX (mm) ${reqStar}</label><input data-cf="P_dx" data-i="${i}" value="${esc(it.cas.P_dx||it.cas.P)}" inputmode="numeric"></div>
+        <div><label>Prof. SX (mm) ${reqStar}</label><input data-cf="P_sx" data-i="${i}" value="${esc(it.cas.P_sx)}" placeholder="Se uguale a DX lascia vuoto o ripeti" inputmode="numeric"></div>
+        <div><label>PZ <span class="req">*</span></label><input data-f="PZ" data-i="${i}" value="${esc(it.PZ)}" inputmode="numeric"></div>
+      </div>
+    `;
+  } else {
+    measHtml = `
+      <div class="grid meas ${hasDepth ? 'g2' : 'g3'}" style="margin-top:10px">
+        <div><label>L (mm) ${reqStar}</label><input data-f="L" data-i="${i}" value="${esc(it.L)}" inputmode="numeric"></div>
+        <div><label>H (mm) ${reqStar}</label><input data-f="H" data-i="${i}" value="${esc(it.H)}" inputmode="numeric"></div>
+        ${hasDepth ? `<div><label>Profondità P (mm) ${reqDepth ? '<span class="req">*</span>' : '<span style="font-weight:400;color:var(--muted)">(facolt.)</span>'}</label><input data-f="P" data-i="${i}" value="${esc(it.P)}" inputmode="numeric"></div>` : ''}
+        <div><label>PZ <span class="req">*</span></label><input data-f="PZ" data-i="${i}" value="${esc(it.PZ)}" inputmode="numeric"></div>
+      </div>
+    `;
+  }
+
+  // Spunte globali (Misura Luce + Solo Riparazione)
+  const globalChecksHtml = `
+    <div class="opt-checks">
+      ${chkField(it,i,'misuraLuce','📐 Misura Luce')}
+      ${cat !== 'varie' ? chkField(it,i,'soloRiparazione','🔧 Solo riparazione / parziale') : ''}
+    </div>
+    ${it.misuraLuce ? `
+      <div class="grid meas g2 sub" style="margin-top:8px">
+        <div><label>L Luce (mm) <span class="req">*</span></label><input data-f="L_luce" data-i="${i}" value="${esc(it.L_luce)}" inputmode="numeric"></div>
+        <div><label>H Luce (mm) <span class="req">*</span></label><input data-f="H_luce" data-i="${i}" value="${esc(it.H_luce)}" inputmode="numeric"></div>
+      </div>
+    ` : ''}
+  `;
+
+  // Campi specifici per categoria
+  let catHtml = '';
+  if (cat === 'serramento') {
+    const casOn = it.cassonetto === 'si';
+    catHtml = `
+      <div class="grid g2" style="margin-top:10px">
+        ${field(it,i,'serie','Serie / Materiale','dl',rFlag)}
+        ${field(it,i,'colore','Colore','dl',rFlag)}
+        ${field(it,i,'vetri','Vetri','dl',rFlag)}
+        ${field(it,i,'telaio','Telaio','dl',rFlag)}
+        ${field(it,i,'apertura','Apertura','dl',rFlag)}
+        <div><label>H maniglia ${reqStar}</label><input data-f="hmaniglia" data-i="${i}" value="${esc(it.hmaniglia)}" placeholder="mm o cm da terra"></div>
+      </div>
+      <div class="opt-checks">
+        ${chkField(it,i,'controtelaio','🔲 Controtelaio presente')}
+        ${chkField(it,i,'coprifili','📏 Carter / Coprifili')}
+      </div>
+      <div class="grid g2" style="margin-top:10px">
+        <div><label>Cassonetto ${reqStar}</label>
+          <select data-f="cassonetto" data-i="${i}"><option value="no"${casOn?'':' selected'}>No</option><option value="si"${casOn?' selected':''}>Sì</option></select></div>
+      </div>
+      ${casOn ? casBlock(it,i,rFlag) : ''}
+    `;
+  } else if (cat === 'mobili_alluminio') {
+    catHtml = `
+      <div class="grid g2" style="margin-top:10px">
+        ${field(it,i,'serie','Serie / Materiale','dl',rFlag)}
+        ${field(it,i,'colore','Colore','dl',rFlag)}
+        ${field(it,i,'vetri','Vetri e Pannelli','dl',rFlag)}
+        ${field(it,i,'apertura','Apertura','dl',rFlag)}
+        <div><label>H maniglia ${reqStar}</label><input data-f="hmaniglia" data-i="${i}" value="${esc(it.hmaniglia)}" placeholder="mm o cm da terra"></div>
+        ${field(it,i,'tipoManiglia','Tipo Maniglia','tipoManiglia',0)}
+        <div><label>Mensole (quantità / note)</label><input data-f="mensole" data-i="${i}" value="${esc(it.mensole)}" placeholder="Es. 3 mensole interne"></div>
+        <div><label>Ante non simmetriche (misure)</label><input data-f="anteNoSim" data-i="${i}" value="${esc(it.anteNoSim)}" placeholder="Misura anta se asimmetrica"></div>
+        <div><label>Fondo <span class="req">*</span></label>
+          <select data-f="fondo" data-i="${i}"><option value="no"${it.fondo==='si'?'':' selected'}>No</option><option value="si"${it.fondo==='si'?' selected':''}>Sì</option></select></div>
+        <div><label>Tetto <span class="req">*</span></label>
+          <select data-f="tetto" data-i="${i}"><option value="no"${it.tetto==='si'?'':' selected'}>No</option><option value="si"${it.tetto==='si'?' selected':''}>Sì</option></select></div>
+        <div><label>H Ringhiera (se serve)</label><input data-f="hRinghiera" data-i="${i}" value="${esc(it.hRinghiera)}" placeholder="mm"></div>
+      </div>
+      <div class="opt-checks">
+        ${chkField(it,i,'coprifili','📏 Carter / Coprifili')}
+      </div>
+    `;
+  } else if (cat === 'veranda') {
+    const casOn = it.cassonetto === 'si';
+    catHtml = `
+      <div class="grid g2" style="margin-top:10px">
+        ${field(it,i,'serie','Serie / Materiale','dl',rFlag)}
+        ${field(it,i,'colore','Colore','dl',rFlag)}
+        ${field(it,i,'vetri','Vetri / Pannelli','dl',rFlag)}
+        ${field(it,i,'telaio','Telaio','dl',rFlag)}
+        ${field(it,i,'apertura','Apertura','dl',rFlag)}
+        <div><label>H maniglia ${reqStar}</label><input data-f="hmaniglia" data-i="${i}" value="${esc(it.hmaniglia)}" placeholder="mm o cm da terra"></div>
+        <div><label>H Ringhiera (se serve)</label><input data-f="hRinghiera" data-i="${i}" value="${esc(it.hRinghiera)}" placeholder="mm"></div>
+        <div><label>Ante simmetriche / Misure ante</label><input data-f="anteNoSim" data-i="${i}" value="${esc(it.anteNoSim)}" placeholder="Sì oppure indica misure"></div>
+        <div><label>Sopralluce</label>
+          <select data-f="sopralluceTipo" data-i="${i}">
+            <option value="nessuno"${it.sopralluceTipo==='nessuno'?' selected':''}>Nessuno</option>
+            <option value="fisso"${it.sopralluceTipo==='fisso'?' selected':''}>Fisso</option>
+            <option value="apribile"${it.sopralluceTipo==='apribile'?' selected':''}>Apribile</option>
+          </select></div>
+        <div><label>Altezza Sopralluce (mm)</label><input data-f="sopralluceH" data-i="${i}" value="${esc(it.sopralluceH)}" inputmode="numeric"></div>
+        <div><label>Altezza Sottoluce (mm)</label><input data-f="sottoluceH" data-i="${i}" value="${esc(it.sottoluceH)}" inputmode="numeric"></div>
+        <div><label>Cassonetto</label>
+          <select data-f="cassonetto" data-i="${i}"><option value="no"${casOn?'':' selected'}>No</option><option value="si"${casOn?' selected':''}>Sì</option></select></div>
+      </div>
+      <div class="opt-checks">
+        ${chkField(it,i,'coprifili','📏 Carter / Coprifili')}
+      </div>
+      ${casOn ? casBlock(it,i,rFlag) : ''}
+    `;
+  } else if (cat === 'cassonetto_solo') {
+    catHtml = `
+      <div class="grid g2" style="margin-top:10px">
+        ${field(it,i,'serie','Serie / Materiale','dl',rFlag)}
+        ${field(it,i,'colore','Colore','dl',rFlag)}
+        <div><label>Tipo cassonetto ${reqStar}</label>
+          <select data-cf="tipo" data-i="${i}"><option value=""></option>${OPZIONI.casTipo.map(t=>'<option'+(it.cas.tipo===t?' selected':'')+'>'+t+'</option>').join('')}</select></div>
+        <div><label>Manovra (Motore / Cinghia)</label>
+          <select data-cf="manovra" data-i="${i}"><option value=""></option>${OPZIONI.casManovra.map(t=>'<option'+(it.cas.manovra===t?' selected':'')+'>'+t+'</option>').join('')}</select></div>
+      </div>
+      <div class="opt-checks">
+        ${chkField(it,i,'coprifili','📏 Carter / Coprifili')}
+      </div>
+    `;
+  } else if (cat === 'porta_blindata' || cat === 'porta_ferro') {
+    const isBlindata = cat === 'porta_blindata';
+    catHtml = `
+      <div class="grid g2" style="margin-top:10px">
+        ${field(it,i,'modelloPorta','Modello','modelloPorta',rFlag)}
+        ${field(it,i,'colore',isBlindata?'Colore Porta':'Colore','dl',rFlag)}
+        ${field(it,i,'vetri','Vetri / Pannelli / Lamiere','dl',0)}
+        ${field(it,i,'telaio','Telaio','dl',0)}
+        ${field(it,i,'apertura','Senso di Apertura','dl',rFlag)}
+        <div><label>H maniglia</label><input data-f="hmaniglia" data-i="${i}" value="${esc(it.hmaniglia)}" placeholder="mm da terra"></div>
+        ${field(it,i,'modelloSerratura','Modello Serratura','modelloSerratura',rFlag)}
+        ${field(it,i,'tipoDefender','Tipo Defender','tipoDefender',0)}
+        ${field(it,i,'coloreFerramenta','Colore Ferramenta','colore',0)}
+        ${field(it,i,'spioncino','Spioncino','spioncino',0)}
+        ${field(it,i,'tipoFissaggio','Tipo di Fissaggio','tipoFissaggio',0)}
+      </div>
+      <div class="opt-checks">
+        ${isBlindata ? chkField(it,i,'pannelloEst','🚪 Pannello Esterno') : ''}
+        ${isBlindata ? chkField(it,i,'pannelloInt','🚪 Pannello Interno') : ''}
+        ${chkField(it,i,'ferramentaDiversa','🎨 Ferramenta int/est diversa')}
+        ${chkField(it,i,'chiusuraSuppl','🔒 Chiusura supplementare')}
+        ${chkField(it,i,'doppiaSerratura','🔑 Doppia serratura')}
+        ${chkField(it,i,'chiudiportaAereo','🦾 Chiudiporta aereo')}
+        ${chkField(it,i,'controtelaio','🔲 Controtelaio')}
+        ${chkField(it,i,'coprifili','📏 Carter / Coprifili')}
+      </div>
+      ${isBlindata && it.pannelloEst ? `
+        <div class="grid g2 sub" style="margin-top:8px">
+          <div><label>Colore/Finitura Pannello Esterno <span class="req">*</span></label><input data-f="pannelloEstColore" data-i="${i}" value="${esc(it.pannelloEstColore)}"></div>
+          <div><label>Spessore Pannello Esterno (mm)</label><input data-f="pannelloEstSpessore" data-i="${i}" value="${esc(it.pannelloEstSpessore)}"></div>
+        </div>
+      ` : ''}
+      ${isBlindata && it.pannelloInt ? `
+        <div class="grid g2 sub" style="margin-top:8px">
+          <div><label>Colore/Finitura Pannello Interno <span class="req">*</span></label><input data-f="pannelloIntColore" data-i="${i}" value="${esc(it.pannelloIntColore)}"></div>
+          <div><label>Spessore Pannello Interno (mm)</label><input data-f="pannelloIntSpessore" data-i="${i}" value="${esc(it.pannelloIntSpessore)}"></div>
+        </div>
+      ` : ''}
+      ${it.ferramentaDiversa ? `
+        <div class="grid g2 sub" style="margin-top:8px">
+          <div><label>Colore Ferramenta Interna <span class="req">*</span></label><input data-f="coloreFerrInt" data-i="${i}" value="${esc(it.coloreFerrInt)}"></div>
+          <div><label>Colore Ferramenta Esterna <span class="req">*</span></label><input data-f="coloreFerrEst" data-i="${i}" value="${esc(it.coloreFerrEst)}"></div>
+        </div>
+      ` : ''}
+    `;
+  } else if (cat === 'portone_palazzo') {
+    catHtml = `
+      <div class="grid g2" style="margin-top:10px">
+        ${field(it,i,'modelloPorta','Modello','modelloPorta',rFlag)}
+        ${field(it,i,'serie','Serie / Materiale','dl',0)}
+        ${field(it,i,'colore','Colore','dl',rFlag)}
+        ${field(it,i,'vetri','Vetri / Pannelli / Lamiere','dl',0)}
+        ${field(it,i,'telaio','Telaio','dl',0)}
+        ${field(it,i,'apertura','Senso di Apertura','dl',rFlag)}
+        <div><label>H maniglia</label><input data-f="hmaniglia" data-i="${i}" value="${esc(it.hmaniglia)}" placeholder="mm da terra"></div>
+        ${field(it,i,'modelloSerratura','Modello Serratura (es. esterna / a montante)','modelloSerratura',rFlag)}
+        ${field(it,i,'manigliaInt','Maniglia Interna','manigliaPortone',rFlag)}
+        ${field(it,i,'manigliaEst','Maniglia Esterna','manigliaPortone',rFlag)}
+        <div><label>Numero copie chiavi</label><input data-f="numChiavi" data-i="${i}" value="${esc(it.numChiavi)}" inputmode="numeric" placeholder="Es. 12"></div>
+        ${field(it,i,'coloreFerramenta','Colore Ferramenta','colore',0)}
+        ${field(it,i,'spioncino','Spioncino','spioncino',0)}
+        ${field(it,i,'tipoFissaggio','Tipo di Fissaggio','tipoFissaggio',0)}
+      </div>
+      <div class="opt-checks">
+        ${chkField(it,i,'ferramentaDiversa','🎨 Ferramenta int/est diversa')}
+        ${chkField(it,i,'chiudiportaAereo','🦾 Chiudiporta aereo')}
+        ${chkField(it,i,'decorazioneVetriIndirizzo','🔢 Decorazioni vetri con indirizzo')}
+        ${chkField(it,i,'pulsantieraCitofono','🔔 Pulsantiera citofonica')}
+        ${chkField(it,i,'coprifili','📏 Carter / Coprifili')}
+      </div>
+      ${it.ferramentaDiversa ? `
+        <div class="grid g2 sub" style="margin-top:8px">
+          <div><label>Colore Ferramenta Interna <span class="req">*</span></label><input data-f="coloreFerrInt" data-i="${i}" value="${esc(it.coloreFerrInt)}"></div>
+          <div><label>Colore Ferramenta Esterna <span class="req">*</span></label><input data-f="coloreFerrEst" data-i="${i}" value="${esc(it.coloreFerrEst)}"></div>
+        </div>
+      ` : ''}
+    `;
+  } else if (cat === 'sportello_alluminio') {
+    catHtml = `
+      <div class="grid g2" style="margin-top:10px">
+        ${field(it,i,'serie','Serie / Materiale','dl',rFlag)}
+        ${field(it,i,'colore','Colore','dl',rFlag)}
+        ${field(it,i,'telaio','Telaio','dl',0)}
+        ${field(it,i,'apertura','Apertura','dl',rFlag)}
+      </div>
+      <div class="opt-checks">
+        ${chkField(it,i,'serraturaChiave','🔑 Serratura con chiave')}
+        ${chkField(it,i,'coprifili','📏 Carter / Coprifili')}
+      </div>
+    `;
+  } else if (cat === 'accessori') {
+    catHtml = `
+      <div class="grid g2" style="margin-top:10px">
+        ${field(it,i,'serie','Serie / Modello','dl',rFlag)}
+        ${field(it,i,'colore','Colore','dl',rFlag)}
+        ${field(it,i,'telaio','Telaio / Guida (facolt.)','dl',0)}
+        ${field(it,i,'apertura','Apertura / Comando (facolt.)','dl',0)}
+      </div>
+    `;
+  } else if (cat === 'ferro_esterno') {
+    catHtml = `
+      <div class="grid g2" style="margin-top:10px">
+        ${field(it,i,'serie','Serie / Materiale','dl',rFlag)}
+        ${field(it,i,'colore','Colore','dl',rFlag)}
+        ${field(it,i,'telaio','Telaio / Fissaggio (facolt.)','dl',0)}
+        ${field(it,i,'apertura','Apertura (facolt.)','dl',0)}
+      </div>
+      <div class="opt-checks">
+        ${chkField(it,i,'coprifili','📏 Carter / Coprifili')}
+      </div>
+    `;
+  } else {
+    // varie / riparazioni
+    catHtml = `
+      <div class="grid g2" style="margin-top:10px">
+        ${field(it,i,'serie','Serie / Materiale (facoltativo)','dl',0)}
+        ${field(it,i,'colore','Colore (facoltativo)','dl',0)}
+      </div>
+    `;
+  }
+
+  return `
+    ${measHtml}
+    ${globalChecksHtml}
+    ${catHtml}
+    <div style="margin-top:10px"><label>Nota ${(cat === 'varie' || it.soloRiparazione) ? '<span class="req">*</span>' : ''}</label>
+      <textarea data-f="nota" data-i="${i}" placeholder="Annotazioni per produzione/montaggio…">${esc(it.nota)}</textarea></div>
+    <div class="medialabel">✏️ Disegno della posizione</div>
+    <div class="thumbs">${mediaThumb(it.disegno,'disegno',i)}</div>
+    <div class="medialabel">📷 Foto (puoi annotarle)</div>
+    <div class="thumbs" id="foto${i}">
+      ${it.foto.map((m,j)=>'<div class="thumb" data-act="editfoto" data-i="'+i+'" data-j="'+j+'"><img src="'+m.img+'"><button class="x" data-act="delfoto" data-i="'+i+'" data-j="'+j+'">✕</button></div>').join('')}
+      <div class="thumb empty" data-act="addfoto" data-i="${i}"><span class="big">＋</span>Aggiungi foto</div></div>
+  `;
+}
+
 function renderItems(){
   const box=document.getElementById('items');box.innerHTML='';
-  if(!document.getElementById('dl_tipologia')){const d=document.createElement('div');d.id='dls';
-    d.innerHTML=['tipologia','serie','colore','vetri','telaio','apertura','pos'].map(k=>
-      '<datalist id="dl_'+k+'">'+dlOpts(OPZIONI[k])+'</datalist>').join('');document.body.appendChild(d);}
   state.items.forEach((it,i)=>{
     const el=document.createElement('div');el.className='item'+(it._confirm===false?' toconfirm':'');
-    const cat = getCategoryForType(it.tipologia);
-    const casOn = it.cassonetto==='si' && cat === 'serramento';
-    
-    let subFieldsHtml = '';
-    if (cat === 'seleziona') {
-      subFieldsHtml = `
-        <div style="margin-top:12px;padding:14px;background:var(--df-light);border-radius:10px;text-align:center;color:var(--df-blue);font-size:14px;font-weight:600;border:1px dashed var(--line)">
-          👉 Seleziona una Tipologia per compilare le misure e i dettagli.
-        </div>
-      `;
-    } else {
-      subFieldsHtml = `
-        <div class="grid meas g3" style="margin-top:10px">
-          <div><label>L (mm) ${cat === 'varie' ? '<span style="font-weight:400;color:var(--muted)">(facoltativo)</span>' : '<span class="req">*</span>'}</label><input data-f="L" data-i="${i}" value="${esc(it.L)}" inputmode="numeric"></div>
-          <div><label>H (mm) ${cat === 'varie' ? '<span style="font-weight:400;color:var(--muted)">(facoltativo)</span>' : '<span class="req">*</span>'}</label><input data-f="H" data-i="${i}" value="${esc(it.H)}" inputmode="numeric"></div>
-          <div><label>PZ <span class="req">*</span></label><input data-f="PZ" data-i="${i}" value="${esc(it.PZ)}" inputmode="numeric"></div></div>
-        
-        ${(() => {
-          if (cat === 'serramento') {
-            return `
-              <div class="grid g2" style="margin-top:10px">
-                ${field(it,i,'serie','Serie / Materiale','dl',1)}
-                ${field(it,i,'colore','Colore','dl',1)}
-                ${field(it,i,'vetri','Vetri','dl',1)}
-                ${field(it,i,'telaio','Telaio','dl',1)}
-                ${field(it,i,'apertura','Apertura','dl',1)}
-                <div><label>H maniglia <span class="req">*</span></label><input data-f="hmaniglia" data-i="${i}" value="${esc(it.hmaniglia)}" placeholder="cm da terra"></div>
-              </div>
-              <div class="grid g2" style="margin-top:10px">
-                <div><label>Cassonetto <span class="req">*</span></label>
-                  <select data-f="cassonetto" data-i="${i}"><option value="no"${casOn?'':' selected'}>No</option><option value="si"${casOn?' selected':''}>Sì</option></select></div>
-              </div>
-              ${casOn?casBlock(it,i):''}
-            `;
-          } else if (cat === 'ferro_esterno') {
-            const showApertura = ['Cancello battente', 'Cancello scorrevole', 'Grata/Inferriata', 'Porta in ferro'].includes(it.tipologia);
-            return `
-              <div class="grid g2" style="margin-top:10px">
-                ${field(it,i,'serie','Serie / Materiale','dl',1)}
-                ${field(it,i,'colore','Colore','dl',1)}
-                ${showApertura ? field(it,i,'apertura','Apertura','dl',0) : ''}
-              </div>
-            `;
-          } else {
-            // varie / riparazioni
-            return `
-              <div class="grid g2" style="margin-top:10px">
-                ${field(it,i,'serie','Serie / Materiale (facoltativo)','dl',0)}
-                ${field(it,i,'colore','Colore (facoltativo)','dl',0)}
-              </div>
-            `;
-          }
-        })()}
-        
-        <div style="margin-top:10px"><label>Nota ${cat === 'varie' ? '<span class="req">*</span>' : ''}</label>
-          <textarea data-f="nota" data-i="${i}" placeholder="Annotazioni per produzione/montaggio…">${esc(it.nota)}</textarea></div>
-        <div class="medialabel">✏️ Disegno della posizione</div>
-        <div class="thumbs">${mediaThumb(it.disegno,'disegno',i)}</div>
-        <div class="medialabel">📷 Foto (puoi annotarle)</div>
-        <div class="thumbs" id="foto${i}">
-          ${it.foto.map((m,j)=>'<div class="thumb" data-act="editfoto" data-i="'+i+'" data-j="'+j+'"><img src="'+m.img+'"><button class="x" data-act="delfoto" data-i="'+i+'" data-j="'+j+'">✕</button></div>').join('')}
-          <div class="thumb empty" data-act="addfoto" data-i="${i}"><span class="big">＋</span>Aggiungi foto</div></div>
-      `;
-    }
-
     el.innerHTML=`
       ${it._confirm===false?`<div class="confirmbar">⚠️ Posizione duplicata: verifica e correggi i campi diversi, poi conferma. <button data-act="confirm" data-i="${i}">✓ Conferma posizione</button></div>`:''}
       <div class="ihead"><span class="badge">Posizione ${i+1}</span>
@@ -672,26 +1022,38 @@ function renderItems(){
       <div class="grid g2">
         ${field(it,i,'pos','Posizione (locale)','dl',1)}
         ${field(it,i,'tipologia','Tipologia','dl',1)}</div>
-      ${subFieldsHtml}
+      <div id="subfields_${i}">${renderSubFields(it, i)}</div>
     `;
     box.appendChild(el);
   });
   updateSummary();
 }
-function casBlock(it,i){return `<div class="sub"><h3>📦 Dettaglio cassonetto</h3>
+
+function casBlock(it,i,rFlag=1){
+  const reqS = rFlag ? '<span class="req">*</span>' : '';
+  return `<div class="sub"><h3>📦 Dettaglio cassonetto</h3>
   <div class="grid g3">
-    <div><label>Largh. (mm) <span class="req">*</span></label><input data-cf="L" data-i="${i}" value="${esc(it.cas.L)}" inputmode="numeric"></div>
-    <div><label>Alt. (mm) <span class="req">*</span></label><input data-cf="H" data-i="${i}" value="${esc(it.cas.H)}" inputmode="numeric"></div>
-    <div><label>Prof. (mm) <span class="req">*</span></label><input data-cf="P" data-i="${i}" value="${esc(it.cas.P)}" inputmode="numeric"></div></div>
-  <div class="grid g2" style="margin-top:10px">
-    <div><label>Tipo cassonetto <span class="req">*</span></label>
+    <div><label>L Spigoli (mm) ${reqS}</label><input data-cf="L_spigoli" data-i="${i}" value="${esc(it.cas.L_spigoli||it.cas.L)}" inputmode="numeric"></div>
+    <div><label>L Infisso (mm) ${reqS}</label><input data-cf="L_infisso" data-i="${i}" value="${esc(it.cas.L_infisso)}" inputmode="numeric"></div>
+    <div><label>Alt. H (mm) ${reqS}</label><input data-cf="H" data-i="${i}" value="${esc(it.cas.H)}" inputmode="numeric"></div>
+  </div>
+  <div class="grid g2" style="margin-top:8px">
+    <div><label>Prof. DX (mm) ${reqS}</label><input data-cf="P_dx" data-i="${i}" value="${esc(it.cas.P_dx||it.cas.P)}" inputmode="numeric"></div>
+    <div><label>Prof. SX (mm)</label><input data-cf="P_sx" data-i="${i}" value="${esc(it.cas.P_sx)}" placeholder="Se uguale a DX lascia vuoto" inputmode="numeric"></div>
+  </div>
+  <div class="grid g3" style="margin-top:10px">
+    <div><label>Tipo cassonetto ${reqS}</label>
       <select data-cf="tipo" data-i="${i}"><option value=""></option>${OPZIONI.casTipo.map(t=>'<option'+(it.cas.tipo===t?' selected':'')+'>'+t+'</option>').join('')}</select></div>
-    <div><label>Note cassonetto</label><input data-cf="note" data-i="${i}" value="${esc(it.cas.note)}"></div></div>
+    <div><label>Manovra</label>
+      <select data-cf="manovra" data-i="${i}"><option value=""></option>${OPZIONI.casManovra.map(t=>'<option'+(it.cas.manovra===t?' selected':'')+'>'+t+'</option>').join('')}</select></div>
+    <div><label>Note cassonetto</label><input data-cf="note" data-i="${i}" value="${esc(it.cas.note)}"></div>
+  </div>
   <div class="medialabel">Foto cassonetto</div>
   <div class="thumbs">
     ${it.cas.foto.map((m,j)=>'<div class="thumb" data-act="editcasfoto" data-i="'+i+'" data-j="'+j+'"><img src="'+m.img+'"><button class="x" data-act="delcasfoto" data-i="'+i+'" data-j="'+j+'">✕</button></div>').join('')}
     <div class="thumb empty" data-act="addcasfoto" data-i="${i}"><span class="big">＋</span>Aggiungi foto</div></div>
-  <div class="medialabel">Disegno cassonetto</div><div class="thumbs">${mediaThumb(it.cas.disegno,'casdis',i)}</div></div>`;}
+  <div class="medialabel">Disegno cassonetto</div><div class="thumbs">${mediaThumb(it.cas.disegno,'casdis',i)}</div></div>`;
+}
 function mediaThumb(m,kind,i){
   if(m&&m.img)return '<div class="thumb" data-act="edit-'+kind+'" data-i="'+i+'"><img src="'+m.img+'"><button class="x" data-act="del-'+kind+'" data-i="'+i+'">✕</button></div>';
   return '<div class="thumb empty" data-act="edit-'+kind+'" data-i="'+i+'"><span class="big">✏️</span>Disegna</div>';}
@@ -701,29 +1063,57 @@ function updateSummary(){const pz=state.items.reduce((s,it)=>s+(parseInt(it.PZ)|
 /* ---------- EVENTI INPUT ---------- */
 document.addEventListener('input',e=>{
   const t=e.target;
-  if(t.dataset.f!==undefined&&t.dataset.i!==undefined){state.items[t.dataset.i][t.dataset.f]=t.value;
+  if(t.dataset.f!==undefined&&t.dataset.i!==undefined){
+    const idx = t.dataset.i;
+    const prevCat = getCategoryForType(state.items[idx].tipologia);
+    state.items[idx][t.dataset.f]=t.value;
     t.classList.remove('missing');
     if(t.dataset.f==='PZ')updateSummary();
     if(t.dataset.f==='tipologia'){
-      if(OPZIONI.tipologia.includes(t.value)){
-        renderItems();
-        const inputToFocus = document.querySelector(`[data-f="tipologia"][data-i="${t.dataset.i}"]`);
-        if(inputToFocus){
-          inputToFocus.focus();
-          const val = inputToFocus.value;
-          inputToFocus.value = '';
-          inputToFocus.value = val;
-        }
+      const newCat = getCategoryForType(t.value);
+      if (newCat !== prevCat) {
+        const subBox = document.getElementById('subfields_' + idx);
+        if (subBox) subBox.innerHTML = renderSubFields(state.items[idx], +idx);
       }
     }
-    save();}
-  else if(t.dataset.cf!==undefined){state.items[t.dataset.i].cas[t.dataset.cf]=t.value;t.classList.remove('missing');save();}
+    save();
+  }
+  else if(t.dataset.cf!==undefined){
+    const idx = t.dataset.i;
+    state.items[idx].cas[t.dataset.cf]=t.value;
+    if(t.dataset.cf==='L_spigoli') state.items[idx].cas.L = t.value;
+    if(t.dataset.cf==='P_dx') state.items[idx].cas.P = t.value;
+    t.classList.remove('missing');
+    save();
+  }
 });
-document.addEventListener('change',e=>{ // cassonetto sì/no + tipo select
+document.addEventListener('change',e=>{
   const t=e.target;
-  if(t.dataset.f==='cassonetto'){state.items[t.dataset.i].cassonetto=t.value;save();renderItems();}
-  else if(t.dataset.cf==='tipo'){state.items[t.dataset.i].cas.tipo=t.value;save();}
-  else if(t.dataset.f==='tipologia'){save();renderItems();}
+  if(t.dataset.fchk!==undefined&&t.dataset.i!==undefined){
+    const idx = +t.dataset.i;
+    state.items[idx][t.dataset.fchk] = t.checked;
+    save();
+    const subBox = document.getElementById('subfields_' + idx);
+    if (subBox) subBox.innerHTML = renderSubFields(state.items[idx], idx);
+  }
+  else if(t.dataset.f==='cassonetto' || t.dataset.f==='fondo' || t.dataset.f==='tetto' || t.dataset.f==='sopralluceTipo'){
+    const idx = +t.dataset.i;
+    state.items[idx][t.dataset.f]=t.value;
+    save();
+    const subBox = document.getElementById('subfields_' + idx);
+    if (subBox) subBox.innerHTML = renderSubFields(state.items[idx], idx);
+  }
+  else if(t.dataset.cf==='tipo' || t.dataset.cf==='manovra'){
+    state.items[t.dataset.i].cas[t.dataset.cf]=t.value;
+    t.classList.remove('missing');
+    save();
+  }
+  else if(t.dataset.f==='tipologia'){
+    const idx = +t.dataset.i;
+    save();
+    const subBox = document.getElementById('subfields_' + idx);
+    if (subBox) subBox.innerHTML = renderSubFields(state.items[idx], idx);
+  }
 });
 ['c_cliente','c_tel','c_via','c_data','c_rilevatore','c_email','c_citofono','c_referente','c_via_cantiere'].forEach(id=>{
   document.getElementById(id).addEventListener('input',e=>{
@@ -788,13 +1178,19 @@ function updateTipoClienteUI() {
 });
 d_type.addEventListener('change',e=>{state.destType=e.target.value;renderDestPath();save();});
 d_commessa.addEventListener('input',e=>{state.destCommessa=e.target.value;e.target.classList.remove('missing');renderDestPath();save();});
+document.getElementById('refreshCommesseBtn').onclick = async () => {
+  const btn = document.getElementById('refreshCommesseBtn');
+  btn.textContent = '⏳ Carico...';
+  const ok = await dbxFetchCommesseList(true);
+  btn.textContent = ok ? '✓ Aggiornato' : '🔄 Aggiorna';
+  setTimeout(() => { btn.textContent = '🔄 Aggiorna'; }, 2000);
+};
 
 /* ---------- EVENTI CLICK ---------- */
 document.addEventListener('click',e=>{
   const tgt=e.target.closest('[data-act]');if(!tgt)return;
   const a=tgt.dataset.act,i=tgt.dataset.i,j=tgt.dataset.j;
-  if(a==='del'){if(confirm('Eliminare questa posizione?')){state.items.splice(i,1);
-    if(!state.items.length)state.items.push(blankItem());save();renderItems();}}
+  if(a==='del'){if(confirm('Eliminare questa posizione?')){state.items.splice(i,1);save();renderItems();}}
   else if(a==='dup'){const c=JSON.parse(JSON.stringify(state.items[i]));
     c.foto=[];c.cas.foto=[];c._confirm=false; // foto non duplicate; richiede conferma
     state.items.splice(parseInt(i)+1,0,c);save();renderItems();}
@@ -823,6 +1219,7 @@ document.getElementById('cloudBtn').onclick=()=>{
   if(!dbxLinked()){openCfg();toast('Collega prima Dropbox (⚙️)',false);return;}
   document.getElementById('destmodal').classList.add('open');
   renderDestPath();
+  dbxFetchCommesseList(false);
 };
 document.getElementById('destClose').onclick=()=>{
   document.getElementById('destmodal').classList.remove('open');
@@ -834,7 +1231,7 @@ document.getElementById('destConfirmUpload').onclick=async()=>{
     return;
   }
   document.getElementById('destmodal').classList.remove('open');
-  await saveToDropbox();
+  await saveToDropbox(true);
 };
 document.getElementById('pdfBtn').onclick=()=>{if(validate()){saveCurrentToRubrica();exportPDF();}};
 
@@ -867,16 +1264,13 @@ function setupEdCanvas(){
   const wrap=document.querySelector('.ed-canvaswrap');const cv=document.getElementById('edCanvas');
   ed.canvas=cv;const maxW=wrap.clientWidth-20,maxH=wrap.clientHeight-20;
   let cw=maxW,ch=maxH;
-  if(ed.bg){ // dimensioni in base alla foto
-    // calcolato dopo il load
-  }
   cv.style.width=cw+'px';cv.style.height=ch+'px';
   const ratio=window.devicePixelRatio||1;cv.width=cw*ratio;cv.height=ch*ratio;
   ed.ctx=cv.getContext('2d');ed.ctx.scale(ratio,ratio);ed._w=cw;ed._h=ch;
   if(ed.bg){ed.bgImg=new Image();ed.bgImg.onload=()=>{fitBg(cw,ch);redrawEd();};ed.bgImg.src=ed.bg;}
   else redrawEd();
 }
-function fitBg(cw,ch){ // adatta canvas all'aspect ratio della foto
+function fitBg(cw,ch){
   const img=ed.bgImg;if(!img)return;const ar=img.width/img.height;let w=cw,h=cw/ar;
   if(h>ch){h=ch;w=ch*ar;}const cv=ed.canvas;cv.style.width=w+'px';cv.style.height=h+'px';
   const ratio=window.devicePixelRatio||1;cv.width=w*ratio;cv.height=h*ratio;
@@ -890,7 +1284,7 @@ function redrawEd(){const ctx=ed.ctx,w=ed._w,h=ed._h;ctx.clearRect(0,0,w,h);
     ctx.beginPath();st.p.forEach((pt,k)=>k?ctx.lineTo(pt.x,pt.y):ctx.moveTo(pt.x,pt.y));ctx.stroke();});}
 function edPos(e){const r=ed.canvas.getBoundingClientRect();const t=e.touches?e.touches[0]:e;
   return{x:(t.clientX-r.left)*ed._w/r.width,y:(t.clientY-r.top)*ed._h/r.height};}
-function edStart(e){e.preventDefault();ed.cur={c:ed.color,w:ed.width,p:[edPos(e)]};ed.strokes.push(ed.cur);}
+function edStart(e){e.preventDefault();ed.cur={c:ed.color,w:ed.width,p:[edPos(e)]};ed.strokes.push(ed.cur);redrawEd();}
 function edMove(e){if(!ed.cur)return;e.preventDefault();ed.cur.p.push(edPos(e));redrawEd();}
 function edEnd(){ed.cur=null;}
 (function bindEd(){const cv=document.getElementById('edCanvas');
@@ -900,10 +1294,18 @@ document.querySelectorAll('.swatch').forEach(s=>s.onclick=()=>{ed.color=s.datase
   document.querySelectorAll('.swatch').forEach(x=>x.classList.toggle('sel',x===s));});
 document.getElementById('edWidth').oninput=e=>ed.width=+e.target.value;
 document.getElementById('edUndo').onclick=()=>{ed.strokes.pop();redrawEd();};
-document.getElementById('edClear').onclick=()=>{ed.strokes=[];redrawEd();};
+document.getElementById('edClear').onclick=()=>{ed.strokes=[];ed.tpl=null;redrawEd();};
 document.getElementById('edCancel').onclick=()=>document.getElementById('editor').classList.remove('open');
-document.getElementById('edSave').onclick=()=>{const img=ed.canvas.toDataURL(ed.bg?'image/jpeg':'image/png',0.85);
-  ed.onSave({bg:ed.bg,tpl:ed.tpl,strokes:ed.strokes,img:img});document.getElementById('editor').classList.remove('open');};
+document.getElementById('edSave').onclick=()=>{
+  if(!ed.bg && !ed.tpl && (!ed.strokes || ed.strokes.length===0)){
+    ed.onSave(null);
+    document.getElementById('editor').classList.remove('open');
+    return;
+  }
+  const img=ed.canvas.toDataURL(ed.bg?'image/jpeg':'image/png',0.85);
+  ed.onSave({bg:ed.bg,tpl:ed.tpl,strokes:ed.strokes,img:img});
+  document.getElementById('editor').classList.remove('open');
+};
 
 /* ---------- TEMPLATE PICKER ---------- */
 document.getElementById('edTplBtn').onclick=()=>{const g=document.getElementById('tplgrid');
@@ -961,7 +1363,7 @@ function fillClientFromContact(c) {
   state.wa = !!c.wa;
   state.tg = !!c.tg;
   state.via = c.via || '';
-  state.citofono = c.citofono || '';
+  state.citofono = c.citofono || c.vianote || '';
   state.tipoCliente = c.tipoCliente || 'privato';
   state.referente = c.referente || '';
   state.cantiereDiverso = !!c.cantiereDiverso;
@@ -980,6 +1382,12 @@ function fillClientFromContact(c) {
   c_citofono.value = state.citofono;
   c_referente.value = state.referente;
   
+  if (state.lat && state.lng) {
+    document.getElementById('gpsHint').innerHTML = `✓ <a href="https://maps.google.com/?q=${state.lat},${state.lng}" target="_blank">apri in mappa</a>`;
+  } else {
+    document.getElementById('gpsHint').innerHTML = '';
+  }
+
   c_cantiere_diverso.checked = state.cantiereDiverso;
   document.getElementById('cantiere_via_wrap').style.display = state.cantiereDiverso ? 'block' : 'none';
   c_via_cantiere.value = state.viaCantiere;
@@ -989,27 +1397,9 @@ function fillClientFromContact(c) {
     document.getElementById('gpsCantiereHint').innerHTML = '';
   }
   
-  const tc = state.tipoCliente || 'privato';
-  document.getElementById('btn_privato').classList.toggle('active', tc === 'privato');
-  document.getElementById('btn_azienda').classList.toggle('active', tc === 'azienda');
-  document.getElementById('btn_rivenditore').classList.toggle('active', tc === 'rivenditore');
+  updateTipoClienteUI();
   
-  const refWrap = document.getElementById('referente_wrap');
-  const refLabel = refWrap.querySelector('label');
-  if (tc === 'azienda') {
-    refWrap.style.display = 'block';
-    refLabel.textContent = 'Referente / Contatto';
-    c_referente.placeholder = 'Es. referente ditta';
-  } else if (tc === 'rivenditore') {
-    refWrap.style.display = 'block';
-    refLabel.textContent = 'Riferimento Cliente Finale';
-    c_referente.placeholder = 'Es. nome cliente del rivenditore';
-  } else {
-    refWrap.style.display = 'none';
-  }
-  c_vianote.value = state.vianote;
-  
-  [c_cliente, c_tel, c_via].forEach(el => el.classList.remove('missing'));
+  [c_cliente, c_tel, c_via, c_via_cantiere].forEach(el => { if (el) el.classList.remove('missing'); });
   renderDestPath();
   save();
   toast('Cliente caricato da rubrica ✓', true);
@@ -1203,6 +1593,7 @@ function openMapModal() {
   
   const currentLat = mapTargetField === 'via' ? state.lat : state.latCantiere;
   const currentLng = mapTargetField === 'via' ? state.lng : state.lngCantiere;
+  const typedAddr = (mapTargetField === 'via' ? state.via : state.viaCantiere || '').trim();
   
   if (currentLat && currentLng) {
     startLat = currentLat;
@@ -1256,8 +1647,25 @@ function openMapModal() {
   
   updateSelectedLocation(startLat, startLng);
   
-  if (!state.lat || !state.lng) {
-    locateGpsOnMap();
+  if (!currentLat || !currentLng) {
+    if (typedAddr.length >= 4) {
+      mapAddressPreview.textContent = "🔍 Ricerca indirizzo inserito...";
+      fetch('https://nominatim.openstreetmap.org/search?format=json&countrycodes=it&limit=1&q=' + encodeURIComponent(typedAddr) + '&email=fioreinstallazioni@gmail.com')
+        .then(r => r.json())
+        .then(arr => {
+          if (arr && arr.length) {
+            const lat = +arr[0].lat, lng = +arr[0].lon;
+            map.setView([lat, lng], 17);
+            mapMarker.setLatLng([lat, lng]);
+            updateSelectedLocation(lat, lng);
+          } else {
+            locateGpsOnMap();
+          }
+        })
+        .catch(() => locateGpsOnMap());
+    } else {
+      locateGpsOnMap();
+    }
   }
 }
 
@@ -1297,7 +1705,6 @@ function locateGpsOnMap() {
     mapMarker.setLatLng([lat, lng]);
     updateSelectedLocation(lat, lng);
   }, () => {
-    alert("Impossibile accedere al GPS. Trascina la mappa manualmente.");
     mapAddressPreview.textContent = "GPS non disponibile. Trascina il marker manualmente.";
   }, { enableHighAccuracy: true, timeout: 8000 });
 }
@@ -1353,7 +1760,18 @@ c_via_cantiere.addEventListener('input',()=>{clearTimeout(viaCantiereTimer);cons
     .catch(()=>list.style.display='none');},600);});
 document.addEventListener('click',e=>{if(e.target!==c_via_cantiere)document.getElementById('viaCantiereSugg').style.display='none';});
 
-/* ---------- VALIDAZIONE (tutti i campi obbligatori) ---------- */
+/* ---------- VALIDAZIONE INTELLIGENTE PER TIPOLOGIA ---------- */
+const FIELD_LABELS = {
+  pos:'Posizione (locale)', tipologia:'Tipologia', L:'Larghezza (L)', H:'Altezza (H)', P:'Profondità (P)', PZ:'Pezzi (PZ)',
+  L_luce:'L Luce', H_luce:'H Luce', serie:'Serie / Materiale', colore:'Colore', vetri:'Vetri / Pannelli',
+  telaio:'Telaio', apertura:'Apertura', hmaniglia:'H maniglia', modelloPorta:'Modello',
+  modelloSerratura:'Modello Serratura', manigliaInt:'Maniglia Interna', manigliaEst:'Maniglia Esterna',
+  pannelloEstColore:'Colore Pannello Esterno', pannelloIntColore:'Colore Pannello Interno',
+  coloreFerrInt:'Colore Ferramenta Interna', coloreFerrEst:'Colore Ferramenta Esterna',
+  L_spigoli:'Larghezza Spigoli cassonetto', L_infisso:'Larghezza Infisso cassonetto',
+  P_dx:'Profondità DX cassonetto', tipo:'Tipo cassonetto'
+};
+
 function validate(){
   document.querySelectorAll('.missing').forEach(x=>x.classList.remove('missing'));
   const miss=[];let firstEl=null;
@@ -1366,29 +1784,70 @@ function validate(){
   state.items.forEach((it,i)=>{
     if(it._confirm===false)miss.push('Pos.'+(i+1)+': confermare posizione duplicata');
     const cat = getCategoryForType(it.tipologia);
+    const isOpt = cat === 'varie' || !!it.soloRiparazione;
     let reqI = ['pos','tipologia','PZ'];
-    if(cat === 'serramento') {
-      reqI = reqI.concat(['L','H','serie','colore','vetri','telaio','apertura','hmaniglia']);
-    } else if(cat === 'ferro_esterno') {
-      reqI = reqI.concat(['L','H','serie','colore']);
+
+    if (!isOpt) {
+      if (cat === 'serramento' || cat === 'veranda') {
+        reqI = reqI.concat(['L','H','serie','colore','vetri','telaio','apertura','hmaniglia']);
+      } else if (cat === 'mobili_alluminio') {
+        reqI = reqI.concat(['L','H','P','serie','colore','vetri','apertura','hmaniglia']);
+      } else if (cat === 'porta_blindata' || cat === 'porta_ferro') {
+        reqI = reqI.concat(['L','H','modelloPorta','colore','apertura','modelloSerratura']);
+        if (cat === 'porta_blindata' && it.pannelloEst) reqI.push('pannelloEstColore');
+        if (cat === 'porta_blindata' && it.pannelloInt) reqI.push('pannelloIntColore');
+        if (it.ferramentaDiversa) reqI.push('coloreFerrInt','coloreFerrEst');
+      } else if (cat === 'portone_palazzo') {
+        reqI = reqI.concat(['L','H','modelloPorta','colore','apertura','modelloSerratura','manigliaInt','manigliaEst']);
+        if (it.ferramentaDiversa) reqI.push('coloreFerrInt','coloreFerrEst');
+      } else if (cat === 'sportello_alluminio') {
+        reqI = reqI.concat(['L','H','serie','colore','apertura']);
+      } else if (cat === 'accessori' || cat === 'ferro_esterno') {
+        reqI = reqI.concat(['L','H','serie','colore']);
+      } else if (cat === 'cassonetto_solo') {
+        reqI = reqI.concat(['serie','colore']);
+      }
     } else {
-      // varie
-      if(!it.nota.trim()){
+      // Varie o Solo Riparazione: obbligatoria la Nota
+      if(!String(it.nota||'').trim()){
         const el = document.querySelector('[data-f="nota"][data-i="'+i+'"]');
         if(el)el.classList.add('missing');
         miss.push('Pos.'+(i+1)+': inserisci una descrizione nella Nota');
         firstEl=firstEl||el;
       }
     }
-    reqI.forEach(f=>{if(!String(it[f]).trim()){const el=document.querySelector('[data-f="'+f+'"][data-i="'+i+'"]');
-      if(el)el.classList.add('missing');miss.push('Pos.'+(i+1)+': '+f);firstEl=firstEl||el;}});
+
+    if (it.misuraLuce) {
+      reqI.push('L_luce', 'H_luce');
+    }
+
+    reqI.forEach(f=>{
+      if(!String(it[f]||'').trim()){
+        const el=document.querySelector('[data-f="'+f+'"][data-i="'+i+'"]');
+        if(el)el.classList.add('missing');
+        miss.push('Pos.'+(i+1)+': '+(FIELD_LABELS[f]||f));
+        firstEl=firstEl||el;
+      }
+    });
     
+    // Validazione Cassonetto (se voce singola o se attivo dentro serramento/veranda)
+    const checkCas = !isOpt && (cat === 'cassonetto_solo' || ((cat === 'serramento' || cat === 'veranda') && it.cassonetto === 'si'));
+    if (checkCas) {
+      ['L_spigoli','L_infisso','H','P_dx','tipo'].forEach(f=>{
+        const val = f==='L_spigoli' ? (it.cas.L_spigoli||it.cas.L) : (f==='P_dx' ? (it.cas.P_dx||it.cas.P) : it.cas[f]);
+        if(!String(val||'').trim()){
+          const el=document.querySelector('[data-cf="'+f+'"][data-i="'+i+'"]');
+          if(el)el.classList.add('missing');
+          miss.push('Pos.'+(i+1)+' cassonetto: '+(FIELD_LABELS[f]||f));
+          firstEl=firstEl||el;
+        }
+      });
+    }
+
     if(!it.disegno||!it.disegno.img)warnings.push('Pos.'+(i+1)+': manca il disegno');
     if(!it.foto.length)warnings.push('Pos.'+(i+1)+': manca la foto');
-    if(cat === 'serramento' && it.cassonetto==='si'){['L','H','P','tipo'].forEach(f=>{if(!String(it.cas[f]).trim()){
-      const el=document.querySelector('[data-cf="'+f+'"][data-i="'+i+'"]');if(el)el.classList.add('missing');
-      miss.push('Pos.'+(i+1)+' cassonetto: '+f);firstEl=firstEl||el;}});}
   });
+
   if(miss.length){if(firstEl)firstEl.scrollIntoView({behavior:'smooth',block:'center'});
     alert('Compila tutti i campi obbligatori:\n\n• '+miss.slice(0,25).join('\n• ')+(miss.length>25?'\n…':''));return false;}
   if(warnings.length){
@@ -1408,40 +1867,101 @@ function exportData(){const clean=JSON.parse(JSON.stringify(state));clean.dropbo
   const a=document.createElement('a');a.href=url;a.download='rilievo_'+destFolderName().replace(/\s+/g,'_')+'_'+state.data+'.json';
   a.click();URL.revokeObjectURL(url);}
 
+/* ---------- FORMATTAZIONE SPECIFICHE POSIZIONE PER STAMPA E PDF ---------- */
+function cleanPdfStr(s){
+  return String(s==null?'':s)
+    .replace(/[\u200B-\u200F\u202A-\u202E\u2066-\u2069]/g,'')
+    .replace(/\u00A0/g,' ')
+    .trim();
+}
+function buildItemSpecs(it){
+  const cat = getCategoryForType(it.tipologia);
+  const specs = [];
+  const add = (k, v) => { const c = cleanPdfStr(v); if (c) specs.push([k, c]); };
+
+  if (it.misuraLuce && (it.L_luce || it.H_luce)) {
+    add('Misura Luce', (it.L_luce||'-') + ' × ' + (it.H_luce||'-') + ' mm');
+  }
+  if (it.soloRiparazione) add('Intervento', 'Solo riparazione / parziale');
+  add('Modello', it.modelloPorta);
+  add('Serie', it.serie);
+  add('Colore', it.colore);
+  add('Vetri/Pannelli', it.vetri);
+  add('Telaio', it.telaio);
+  if (it.controtelaio) add('Controtelaio', 'Sì');
+  add('Apertura', it.apertura);
+  add('H maniglia', it.hmaniglia);
+  add('Tipo Maniglia', it.tipoManiglia);
+  add('Mensole', it.mensole);
+  if (cat === 'mobili_alluminio') {
+    add('Fondo', it.fondo === 'si' ? 'Sì' : 'No');
+    add('Tetto', it.tetto === 'si' ? 'Sì' : 'No');
+  }
+  add('Ante / Simm.', it.anteNoSim);
+  add('H Ringhiera', it.hRinghiera);
+  if (cat === 'veranda' && it.sopralluceTipo && it.sopralluceTipo !== 'nessuno') {
+    add('Sopralluce', it.sopralluceTipo + (it.sopralluceH ? ' (H ' + it.sopralluceH + ' mm)' : ''));
+  }
+  add('H Sottoluce', it.sottoluceH);
+  add('Serratura', it.modelloSerratura);
+  if (it.serraturaChiave) add('Serratura chiave', 'Sì');
+  add('Defender', it.tipoDefender);
+  if (it.ferramentaDiversa) {
+    add('Ferramenta Int.', it.coloreFerrInt);
+    add('Ferramenta Est.', it.coloreFerrEst);
+  } else {
+    add('Colore Ferr.', it.coloreFerramenta);
+  }
+  if (it.pannelloEst) add('Pannello Est.', (it.pannelloEstColore||'') + (it.pannelloEstSpessore ? ' ('+it.pannelloEstSpessore+' mm)' : ''));
+  if (it.pannelloInt) add('Pannello Int.', (it.pannelloIntColore||'') + (it.pannelloIntSpessore ? ' ('+it.pannelloIntSpessore+' mm)' : ''));
+  add('Spioncino', it.spioncino);
+  add('Fissaggio', it.tipoFissaggio);
+  add('Maniglia Int.', it.manigliaInt);
+  add('Maniglia Est.', it.manigliaEst);
+  add('Copie chiavi', it.numChiavi);
+  if (it.chiusuraSuppl) add('Chiusura suppl.', 'Sì');
+  if (it.doppiaSerratura) add('Doppia serratura', 'Sì');
+  if (it.chiudiportaAereo) add('Chiudiporta aereo', 'Sì');
+  if (it.decorazioneVetriIndirizzo) add('Decoraz. vetro', 'Con indirizzo');
+  if (it.pulsantieraCitofono) add('Pulsantiera citof.', 'Sì');
+  if (it.coprifili) add('Carter/Coprifili', 'Sì');
+  if (cat === 'serramento' || cat === 'veranda') {
+    add('Cassonetto', it.cassonetto === 'si' ? 'Sì' : 'No');
+  }
+  return specs;
+}
+function formatCasSummary(it){
+  const c = it.cas || {};
+  const lSpig = c.L_spigoli || c.L || '-';
+  const lInf = c.L_infisso ? ' (L infisso ' + c.L_infisso + ')' : '';
+  const h = c.H || '-';
+  const pDx = c.P_dx || c.P || '-';
+  const pSx = c.P_sx && c.P_sx !== pDx ? ' / SX ' + c.P_sx : '';
+  const man = c.manovra ? ' · Manovra: ' + c.manovra : '';
+  const note = c.note ? ' — ' + c.note : '';
+  return `Cassonetto ${c.tipo||''}: L spigoli ${lSpig}${lInf} × H ${h} × P DX ${pDx}${pSx} mm${man}${note}`;
+}
+
 /* ---------- REPORT (markup condiviso PDF) ---------- */
 function buildReportInner(){
   const rows=state.items.map((it,i)=>{
+    const cat = getCategoryForType(it.tipologia);
+    const hasCas = cat === 'cassonetto_solo' || ((cat === 'serramento' || cat === 'veranda') && it.cassonetto === 'si');
     const imgs=[it.disegno].concat(it.foto).filter(m=>m&&m.img).map(m=>'<img src="'+m.img+'">').join('');
-    const cas=it.cassonetto==='si'?`<div class="pcas"><b>Cassonetto ${esc(it.cas.tipo)}:</b> ${esc(it.cas.L)}×${esc(it.cas.H)}×${esc(it.cas.P)} mm ${esc(it.cas.note)}
+    const cas=hasCas?`<div class="pcas"><b>${esc(formatCasSummary(it))}</b>
       ${[it.cas.disegno].concat(it.cas.foto).filter(m=>m&&m.img).map(m=>'<img src="'+m.img+'">').join('')}</div>`:'';
+    const specs = buildItemSpecs(it);
+    const measLine = cat === 'cassonetto_solo'
+      ? `<span>L Spig. <b>${esc(it.cas.L_spigoli||it.cas.L)}</b></span><span>L Inf. <b>${esc(it.cas.L_infisso||'-')}</b></span><span>H <b>${esc(it.cas.H||it.H)}</b></span><span>PZ <b>${esc(it.PZ)}</b></span>`
+      : `<span>L <b>${esc(it.L)}</b></span><span>H <b>${esc(it.H)}</b></span>${it.P ? '<span>P <b>'+esc(it.P)+'</b></span>' : ''}<span>PZ <b>${esc(it.PZ)}</b></span>`;
     return `<table class="pblock"><tr>
       <td class="plabels">
         <div><b>Pos. ${i+1}:</b> ${esc(it.pos)||'&nbsp;'}</div>
-        <div>Tipologia: ${esc(it.tipologia)}</div>
-        ${(() => {
-          const cat = getCategoryForType(it.tipologia);
-          if (cat === 'serramento') {
-            return `
-              <div>Serie: ${esc(it.serie)}</div><div>Colore: ${esc(it.colore)}</div>
-              <div>Vetri: ${esc(it.vetri)}</div><div>Telaio: ${esc(it.telaio)}</div>
-              <div>Apertura: ${esc(it.apertura)}</div><div>H maniglia: ${esc(it.hmaniglia)}</div>
-              <div>Cassonetto: ${it.cassonetto==='si'?'Sì':'No'}</div>
-            `;
-          } else if (cat === 'ferro_esterno') {
-            const showApertura = ['Cancello battente', 'Cancello scorrevole', 'Grata/Inferriata', 'Porta in ferro'].includes(it.tipologia);
-            return `
-              <div>Serie: ${esc(it.serie)}</div><div>Colore: ${esc(it.colore)}</div>
-              ${showApertura ? '<div>Apertura: ' + esc(it.apertura) + '</div>' : ''}
-            `;
-          } else {
-            return `
-              ${it.serie ? '<div>Serie: ' + esc(it.serie) + '</div>' : ''}
-              ${it.colore ? '<div>Colore: ' + esc(it.colore) + '</div>' : ''}
-            `;
-          }
-        })()}</td>
+        <div>Tipologia: <b>${esc(it.tipologia)}</b></div>
+        ${specs.map(([k,v]) => `<div>${esc(k)}: ${esc(v)}</div>`).join('')}
+      </td>
       <td class="pmain">
-        <div class="pmeas"><span>L <b>${esc(it.L)}</b></span><span>H <b>${esc(it.H)}</b></span><span>PZ <b>${esc(it.PZ)}</b></span></div>
+        <div class="pmeas">${measLine}</div>
         <div class="pmedia">${imgs}</div>${cas}
         <div class="pnota">Nota: ${esc(it.nota)}</div></td></tr></table>`;}).join('');
   const pz=state.items.reduce((s,it)=>s+(parseInt(it.PZ)||0),0);
@@ -1452,9 +1972,9 @@ function buildReportInner(){
     .head .logo{font-size:22px;font-weight:800;color:#fff;background:#1a4f9c;padding:3px 8px;border-radius:4px}
     .ci{width:100%;border-collapse:collapse;margin-bottom:10px}.ci td{border:1px solid #000;padding:4px 6px}
     .pblock{width:100%;border-collapse:collapse;margin-bottom:8px;page-break-inside:avoid}
-    .pblock td{border:1px solid #000;vertical-align:top}.plabels{width:30%;padding:4px 6px}
+    .pblock td{border:1px solid #000;vertical-align:top}.plabels{width:32%;padding:4px 6px}
     .plabels div{border-bottom:1px solid #ccc;padding:2px 0}.pmain{padding:6px}
-    .pmeas{display:flex;gap:18px;font-size:15px;border-bottom:1px solid #000;padding-bottom:4px;margin-bottom:4px}
+    .pmeas{display:flex;gap:18px;font-size:15px;border-bottom:1px solid #000;padding-bottom:4px;margin-bottom:4px;flex-wrap:wrap}
     .pmedia{display:flex;gap:6px;flex-wrap:wrap}.pmedia img{max-height:150px;max-width:31%;border:1px solid #ccc;object-fit:contain}
     .pcas{margin-top:4px;border-top:1px dashed #999;padding-top:3px}.pcas img{max-height:110px;max-width:30%;border:1px solid #ccc;margin:3px 3px 0 0}
     .pnota{margin-top:4px;border-top:1px solid #000;padding-top:3px;min-height:18px}
@@ -1471,8 +1991,8 @@ function buildReportInner(){
           details.push('Rivenditore');
           if (state.referente) details.push('Cliente Finale: ' + state.referente);
         }
-        return details.length ? ' [' + details.join(' - ') + ']' : '';
-      })()}</td><td><b>Tel:</b> ${esc(state.tel)}${(() => {
+        return details.length ? ' [' + esc(details.join(' - ')) + ']' : '';
+      })()}</td><td><b>Tel:</b> ${esc(cleanPdfStr(state.tel))}${(() => {
         let channels = [];
         if (state.wa) channels.push('WhatsApp');
         if (state.tg) channels.push('Telegram');
@@ -1501,7 +2021,7 @@ const DBX_KEY='df_dropbox_cfg';
 function getDbx(){try{return JSON.parse(localStorage.getItem(DBX_KEY))||{};}catch(e){return {};}}
 function setDbx(c){localStorage.setItem(DBX_KEY,JSON.stringify(c));}
 function dbxLinked(){return !!getDbx().refresh;}
-function asciiSafe(s){return s.replace(/[-￿]/g,c=>'\\u'+c.charCodeAt(0).toString(16).padStart(4,'0'));}
+function asciiSafe(s){return s.replace(/[\u007f-\uffff]/g,c=>"\\u"+c.charCodeAt(0).toString(16).padStart(4,"0"));}
 
 function b64url(buf){let s='';const b=new Uint8Array(buf);for(let i=0;i<b.length;i++)s+=String.fromCharCode(b[i]);
   return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
@@ -1531,8 +2051,11 @@ async function dbxUpload(path,blob,token){
     body:blob});
   if(!r.ok)throw new Error('Upload fallito: '+(await r.text()));return r.json();}
 
-async function dbxFetchCommesseList() {
-  if (!dbxLinked()) return;
+async function dbxFetchCommesseList(showFeedback = false) {
+  if (!dbxLinked()) {
+    if (showFeedback) toast('Collega prima Dropbox (⚙️)', false);
+    return false;
+  }
   try {
     const token = await dbxAccessToken();
     const r = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
@@ -1554,7 +2077,7 @@ async function dbxFetchCommesseList() {
       .filter(e => e['.tag'] === 'folder' && !exclude.includes(e.name) && !e.name.startsWith('---'))
       .map(e => e.name);
     
-    // Ordina numericamente decrescente (es: C41, C40, C39, ..., C3)
+    // Ordina numericamente decrescente (es: C46, C45, ..., C3)
     folders.sort((a, b) => {
       const getNum = s => {
         const m = s.match(/^C\.?(\d+)/i);
@@ -1570,9 +2093,13 @@ async function dbxFetchCommesseList() {
       localStorage.setItem('df_commesse_list', JSON.stringify(folders));
       renderCommessaDatalist();
       console.log('Lista commesse aggiornata da Dropbox ✓');
+      return true;
     }
+    return false;
   } catch (e) {
     console.error('Errore nel recuperare la lista commesse da Dropbox:', e);
+    if (showFeedback) toast('Errore aggiornamento commesse', false);
+    return false;
   }
 }
 
@@ -1587,13 +2114,20 @@ async function prepImg(src,maxPx,q){const im=await loadImg(src);if(!im)return nu
   x.fillStyle='#fff';x.fillRect(0,0,cw,ch);x.drawImage(im,0,0,cw,ch);
   return {data:c.toDataURL('image/jpeg',q),w:w,h:h};}
 
+function cleanPdfStr(s){
+  return String(s == null ? '' : s)
+    .replace(/[\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/g, '')
+    .replace(/\u00A0/g, ' ')
+    .replace(/[•·]/g, '-');
+}
+
 /* genera il PDF come Blob — costruito direttamente (testo nitido + immagini compresse) */
 async function buildPdfBlob(){
   if(!window.jspdf)await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
   const {jsPDF}=window.jspdf;const doc=new jsPDF('p','mm','a4');
   const PW=210,PH=297,M=12,W=PW-2*M;let y=M;
   const ensure=h=>{if(y+h>PH-M){doc.addPage();y=M;}};
-  const F=(s,t)=>doc.setFont('helvetica',s||'normal');
+  const F=(s)=>doc.setFont('helvetica',s||'normal');
   // intestazione
   doc.setFillColor(26,79,156);doc.rect(M,y,9,7,'F');
   doc.setTextColor(255);F('bold');doc.setFontSize(11);doc.text('DF',M+1.6,y+5);
@@ -1604,14 +2138,14 @@ async function buildPdfBlob(){
   y+=9;doc.setDrawColor(26,79,156);doc.setLineWidth(0.5);doc.line(M,y,PW-M,y);y+=5;
   // cliente
   doc.setTextColor(20);doc.setFontSize(9);
-  const kv=(l,v,xx,yy)=>{F('bold');doc.text(l,xx,yy);F('normal');doc.text(String(v||''),xx+doc.getTextWidth(l)+2,yy);};
+  const kv=(l,v,xx,yy)=>{F('bold');doc.text(cleanPdfStr(l),xx,yy);F('normal');doc.text(cleanPdfStr(v),xx+doc.getTextWidth(cleanPdfStr(l))+2,yy);};
   
   let channels = [];
   if (state.wa) channels.push('WA');
   if (state.tg) channels.push('TG');
   const chanStr = channels.length ? ' (' + channels.join('/') + ')' : '';
   
-  let clientLabel = state.cliente;
+  let clientLabel = state.cliente || '';
   if (state.tipoCliente === 'azienda') {
     clientLabel += ' [Azienda]';
     if (state.referente) clientLabel += ' (Ref: ' + state.referente + ')';
@@ -1620,8 +2154,13 @@ async function buildPdfBlob(){
     if (state.referente) clientLabel += ' (Cliente Finale: ' + state.referente + ')';
   }
   
-  kv('Cliente:', clientLabel, M, y);
-  kv('Tel:', (state.tel || '') + chanStr, M+110, y);
+  const clientLines = doc.splitTextToSize(cleanPdfStr(clientLabel), 92);
+  kv('Cliente:', clientLines[0] || '', M, y);
+  kv('Tel:', cleanPdfStr((state.tel || '') + chanStr), M+110, y);
+  for (let i = 1; i < clientLines.length; i++) {
+    y += 4.5;
+    doc.text(clientLines[i], M + 15, y);
+  }
   y += 5;
   
   if (state.email) {
@@ -1631,31 +2170,31 @@ async function buildPdfBlob(){
   
   if (state.via) {
     const label = state.cantiereDiverso ? 'Indirizzo Cliente:' : 'Indirizzo:';
-    const viaLines = doc.splitTextToSize(state.via, W - 20);
+    const viaLines = doc.splitTextToSize(cleanPdfStr(state.via), W - 28);
     kv(label, viaLines[0], M, y);
     for (let i = 1; i < viaLines.length; i++) {
       y += 4.5;
-      doc.text(viaLines[i], M + 18, y);
+      doc.text(viaLines[i], M + 28, y);
     }
     y += 5;
   }
   
   if (state.cantiereDiverso && state.viaCantiere) {
-    const viaLines = doc.splitTextToSize(state.viaCantiere, W - 20);
+    const viaLines = doc.splitTextToSize(cleanPdfStr(state.viaCantiere), W - 30);
     kv('Indirizzo Cantiere:', viaLines[0], M, y);
     for (let i = 1; i < viaLines.length; i++) {
       y += 4.5;
-      doc.text(viaLines[i], M + 18, y);
+      doc.text(viaLines[i], M + 30, y);
     }
     y += 5;
   }
   
   if (state.citofono) {
-    const citoLines = doc.splitTextToSize(state.citofono, W - 20);
+    const citoLines = doc.splitTextToSize(cleanPdfStr(state.citofono), W - 26);
     kv('Citofono/Note:', citoLines[0], M, y);
     for (let i = 1; i < citoLines.length; i++) {
       y += 4.5;
-      doc.text(citoLines[i], M + 18, y);
+      doc.text(citoLines[i], M + 26, y);
     }
     y += 5;
   }
@@ -1663,33 +2202,29 @@ async function buildPdfBlob(){
   kv('Rilevatore:', state.rilevatore, M, y);
   y += 5;
   
-  doc.setFontSize(7.5);doc.setTextColor(90);doc.text('Cartella: '+destPath()+'/',M,y);
+  doc.setFontSize(7.5);doc.setTextColor(90);doc.text(cleanPdfStr('Cartella: '+destPath()+'/'),M,y);
   doc.setTextColor(20);doc.setFontSize(9);y+=3;
   doc.setDrawColor(180);doc.line(M,y,PW-M,y);y+=4;
   // posizioni
   for(let i=0;i<state.items.length;i++){const it=state.items[i];
+    const cat = getCategoryForType(it.tipologia);
+    const isVeranda = (cat === 'veranda');
+    const isCasSolo = (cat === 'cassonetto_solo');
     ensure(16);
     doc.setFillColor(26,79,156);doc.rect(M,y,W,7,'F');
     doc.setTextColor(255);F('bold');doc.setFontSize(10);
-    let titolo='Posizione '+(i+1)+(it.pos?'   '+it.pos:'')+(it.tipologia?'  ·  '+it.tipologia:'');
-    doc.text(doc.splitTextToSize(titolo,W-46)[0],M+2,y+5);
-    doc.setFontSize(9.5);doc.text('L '+it.L+'  H '+it.H+'  PZ '+it.PZ,PW-M-2,y+5,{align:'right'});
+    let titolo='Posizione '+(i+1)+(it.pos?'   '+it.pos:'')+(it.tipologia?'  -  '+it.tipologia:'')+(it.soloRiparazione?' [Riparazione]':'');
+    doc.text(doc.splitTextToSize(cleanPdfStr(titolo),W-62)[0],M+2,y+5);
+    doc.setFontSize(9);
+    const dimHdr = isVeranda
+      ? `Sp.${it.L||'-'} Inf.${it.L_infisso||'-'} H${it.H||'-'} PZ ${it.PZ||'-'}`
+      : isCasSolo
+        ? `Sp.${it.cas?.L_spigoli||'-'} Inf.${it.cas?.L_infisso||'-'} H${it.cas?.H||'-'} PZ ${it.cas?.PZ||it.PZ||'-'}`
+        : `L ${it.L||'-'}  H ${it.H||'-'}${it.P?'  P '+it.P:''}  PZ ${it.PZ||'-'}`;
+    doc.text(cleanPdfStr(dimHdr),PW-M-2,y+5,{align:'right'});
     y+=9;
     doc.setTextColor(40);F('normal');doc.setFontSize(8.5);
-    const cat = getCategoryForType(it.tipologia);
-    let specs = [];
-    if (cat === 'serramento') {
-      specs = [['Serie',it.serie],['Colore',it.colore],['Vetri',it.vetri],['Telaio',it.telaio],
-        ['Apertura',it.apertura],['H maniglia',it.hmaniglia]];
-    } else if (cat === 'ferro_esterno') {
-      const showApertura = ['Cancello battente', 'Cancello scorrevole', 'Grata/Inferriata', 'Porta in ferro'].includes(it.tipologia);
-      specs = [['Serie',it.serie],['Colore',it.colore]];
-      if (showApertura) specs.push(['Apertura',it.apertura]);
-    } else {
-      if (it.serie) specs.push(['Serie',it.serie]);
-      if (it.colore) specs.push(['Colore',it.colore]);
-    }
-    
+    const specs = buildItemSpecs(it);
     const rows=Math.ceil(specs.length/2);
     if (rows > 0) {
       ensure(rows*4.6+2);
@@ -1697,17 +2232,22 @@ async function buildPdfBlob(){
         const col=k%2,row=Math.floor(k/2);
         const xx=M+col*(W/2);
         const ry=y+row*4.6+3;
-        F('bold');doc.text(specs[k][0]+':',xx,ry);
-        F('normal');doc.text(String(specs[k][1]||'-'),xx+22,ry);
+        const lbl = cleanPdfStr(specs[k][0]+':');
+        F('bold');doc.text(lbl,xx,ry);
+        const lw = Math.max(24, doc.getTextWidth(lbl) + 2);
+        F('normal');
+        const valStr = doc.splitTextToSize(cleanPdfStr(specs[k][1]||'-'), (W/2)-lw-2)[0] || '-';
+        doc.text(valStr,xx+lw,ry);
       }
       y+=rows*4.6+3;
     }
-    if(it.cassonetto==='si'){ensure(7);F('bold');doc.setTextColor(26,79,156);
-      const ct='Cassonetto '+(it.cas.tipo||'')+': '+it.cas.L+'×'+it.cas.H+'×'+it.cas.P+' mm'+(it.cas.note?' — '+it.cas.note:'');
-      doc.text(doc.splitTextToSize(ct,W),M,y+3);doc.setTextColor(40);F('normal');y+=6;}
-    if(it.nota){const nl=doc.splitTextToSize('Nota: '+it.nota,W);ensure(nl.length*4.2+2);doc.text(nl,M,y+3);y+=nl.length*4.2+3;}
+    const casSummary = formatCasSummary(it);
+    if(casSummary){ensure(8);F('bold');doc.setTextColor(26,79,156);
+      const casLines = doc.splitTextToSize(cleanPdfStr(casSummary),W);
+      doc.text(casLines,M,y+3);doc.setTextColor(40);F('normal');y+=casLines.length*4.2+2;}
+    if(it.nota){const nl=doc.splitTextToSize(cleanPdfStr('Nota: '+it.nota),W);ensure(nl.length*4.2+2);doc.text(nl,M,y+3);y+=nl.length*4.2+3;}
     // immagini (disegno + foto + cassonetto), compresse, 3 per riga
-    const imgs=[it.disegno].concat(it.foto).concat(it.cassonetto==='si'?[it.cas.disegno].concat(it.cas.foto):[]).filter(m=>m&&m.img);
+    const imgs=[it.disegno].concat(it.foto||[]).concat((it.cassonetto==='si'||isCasSolo)?[it.cas?.disegno].concat(it.cas?.foto||[]):[]).filter(m=>m&&m.img);
     if(imgs.length){const cols=3,gap=3,BW=(W-(cols-1)*gap)/cols,BH=42;
       for(let k=0;k<imgs.length;k++){const col=k%cols;if(col===0)ensure(BH+gap);
         const p=await prepImg(imgs[k].img,900,0.72);if(!p)continue;
@@ -1720,14 +2260,17 @@ async function buildPdfBlob(){
     y+=1;doc.setDrawColor(200);doc.line(M,y,PW-M,y);y+=4;
   }
   // piè di pagina
-  const pz=state.items.reduce((s,it)=>s+(parseInt(it.PZ)||0),0);
+  const pz=state.items.reduce((s,it)=>{
+    const c=getCategoryForType(it.tipologia);
+    return s+(parseInt(c==='cassonetto_solo'?(it.cas?.PZ||it.PZ):it.PZ)||0);
+  },0);
   ensure(8);doc.setFontSize(8.5);doc.setTextColor(80);
-  doc.text(state.items.length+' posizioni · '+pz+' pezzi totali',M,y+3);
+  doc.text(state.items.length+' posizioni - '+pz+' pezzi totali',M,y+3);
   doc.text('Firma cliente: ________________',PW-M,y+3,{align:'right'});
   return doc.output('blob');}
 
-async function saveToDropbox(){
-  if(!validate())return;
+async function saveToDropbox(skipValidate = false){
+  if(!skipValidate && !validate())return;
   saveCurrentToRubrica();
   if(!dbxLinked()){openCfg();toast('Collega prima Dropbox (⚙️)',false);return;}
   const btn=document.getElementById('cloudBtn');const old=btn.innerHTML;
@@ -1781,33 +2324,87 @@ function resizeImage(src,max,cb){const img=new Image();img.onload=()=>{let w=img
   const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);
   cb(c.toDataURL('image/jpeg',0.82));};img.src=src;}
 
-/* ---------- GESTIONE COMPORTAMENTO DROPDOWN / DATALIST ---------- */
+/* ---------- MENU A TENDINA PERSONALIZZATI (FRECCIA ▼ = TUTTE LE VOCI, TESTO = SCRITTURA LIBERA) ---------- */
+let activeDdMenu = null;
+let activeDdInput = null;
+
+function closeCustomDropdown() {
+  if (activeDdMenu) {
+    activeDdMenu.remove();
+    activeDdMenu = null;
+    activeDdInput = null;
+  }
+}
+
+function getOptionsForInput(input) {
+  const key = input.getAttribute('data-dd');
+  if (!key) return [];
+  if (key === 'COMMESSE') return getCommesseList();
+  return OPZIONI[key] || [];
+}
+
+function openCustomDropdown(input, filterText = null) {
+  closeCustomDropdown();
+  const allOpts = getOptionsForInput(input);
+  if (!allOpts.length) return;
+  const q = filterText !== null ? filterText.trim().toLowerCase() : '';
+  const opts = q ? allOpts.filter(o => o.toLowerCase().includes(q)) : allOpts;
+  if (!opts.length) return;
+
+  const wrapper = input.closest('.input-with-arrow') || input.parentElement;
+  const menu = document.createElement('div');
+  menu.className = 'custom-dd-menu';
+  const curVal = (input.value || '').trim();
+  menu.innerHTML = opts.map(o => `<div class="custom-dd-item${o === curVal ? ' active' : ''}" data-val="${esc(o)}">${esc(o)}</div>`).join('');
+  wrapper.appendChild(menu);
+  activeDdMenu = menu;
+  activeDdInput = input;
+}
+
 document.addEventListener('click', e => {
-  if (e.target.classList.contains('dropdown-arrow')) {
-    const input = e.target.previousElementSibling;
-    if (input && input.tagName === 'INPUT') {
-      const oldVal = input.value;
-      input.setAttribute('data-old-val', oldVal);
-      input.value = ''; // Svuota temporaneamente nel DOM per bypassare il filtro
-      
-      try {
-        input.showPicker();
-      } catch (err) {
-        input.focus();
+  const arrow = e.target.closest('.dropdown-arrow');
+  if (arrow) {
+    e.preventDefault();
+    e.stopPropagation();
+    const wrapper = arrow.closest('.input-with-arrow');
+    const input = wrapper ? wrapper.querySelector('input') : arrow.previousElementSibling;
+    if (input) {
+      if (activeDdInput === input && activeDdMenu) {
+        closeCustomDropdown();
+      } else {
+        openCustomDropdown(input, null); // Freccia ▼: mostra SEMPRE il 100% delle opzioni non filtrate
       }
     }
+    return;
+  }
+
+  const ddItem = e.target.closest('.custom-dd-item');
+  if (ddItem && activeDdInput) {
+    e.preventDefault();
+    e.stopPropagation();
+    const val = ddItem.getAttribute('data-val');
+    const inp = activeDdInput;
+    closeCustomDropdown();
+    inp.value = val;
+    inp.dispatchEvent(new Event('input', { bubbles: true }));
+    inp.dispatchEvent(new Event('change', { bubbles: true }));
+    return;
+  }
+
+  if (activeDdMenu && !e.target.closest('.custom-dd-menu')) {
+    closeCustomDropdown();
   }
 });
 
-document.addEventListener('focusout', e => {
+document.addEventListener('input', e => {
   const t = e.target;
-  if (t.tagName === 'INPUT' && t.getAttribute('data-old-val') !== null) {
-    setTimeout(() => {
-      if (t.value === '') {
-        t.value = t.getAttribute('data-old-val');
-      }
-      t.removeAttribute('data-old-val');
-    }, 150);
+  if (t.tagName === 'INPUT' && t.hasAttribute('data-dd')) {
+    const val = t.value || '';
+    if (val.trim().length > 0) {
+      openCustomDropdown(t, val);
+    } else {
+      closeCustomDropdown();
+    }
   }
 });
 
