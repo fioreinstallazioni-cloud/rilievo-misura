@@ -169,6 +169,10 @@ body.bloccato { overflow: hidden; }
 .btn-primary.btn-rosso { background: var(--rosso); }
 .btn-primary.btn-rosso:hover { background: #b52e29; }
 #posizioni:empty { display: none; }
+/* il contenitore delle posizioni occupa sempre tutta la colonna: con margin auto
+   dentro la griglia prendeva la larghezza del contenuto e cambiava con la tipologia */
+#posizioni { margin: 0; max-width: none; width: 100%; padding: 0; }
+#posizioni > .tessera { width: 100%; }
 .btn-lg { min-height: 48px; padding: 12px 20px; font-size: var(--fs-15); font-weight: 600; }
 .btn-block { width: 100%; }
 .btn-icona { width: 40px; min-width: 40px; padding: 0; }

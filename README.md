@@ -71,7 +71,7 @@ A gennaio cambia l'anno della cartella in *Impostazioni → Cartella delle comme
 ## Pubblicare una versione nuova
 
 I file dell'app restano in copia sul telefono: perché i telefoni prendano la versione nuova bisogna
-cambiare il numero di versione **in tutti questi punti** (cerca `3.2.0`):
+cambiare il numero di versione **in tutti questi punti** (cerca `3.2.1`):
 
 - `sw.js` → `VERSIONE` e i `?v=` nella lista `FILE_APP` e in `importScripts`
 - `index.html` → i `?v=` di `app.css`, `dbx.js`, `app.js`
