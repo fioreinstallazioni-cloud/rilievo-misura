@@ -22,6 +22,21 @@ blu DF `#2F6FD0`).
 - **PDF** crea un vero file PDF (anche offline) da condividere su WhatsApp/email o salvare.
 - Tasto «indietro» del telefono: chiude la finestra aperta invece di uscire dall'app.
 
+## Novità della 3.2
+
+- **Rubrica aziendale**: i clienti si cercano nella rubrica unica `Ufficio/Rubrica/Rubrica Selvaggia.xlsx`
+  su Dropbox (per nome, telefono, città o P.IVA). L'app la scarica, ne tiene una copia sul telefono per
+  lavorare senza linea e la riscarica solo quando è cambiata (al massimo ogni 6 ore, o col tasto
+  «Aggiorna»). **Non la modifica**: i clienti nuovi restano «sul telefono · da registrare in rubrica
+  aziendale», e nel file `dati_….json` c'è `cliente_in_rubrica_aziendale: false`.
+  Il percorso del file si cambia in *Impostazioni → Rubrica aziendale*.
+- **WhatsApp e Telegram** con le loro icone.
+- **Numero civico**: nella mappa c'è il campo «N° civico» (preso da quello che avevi scritto, o da
+  OpenStreetMap quando lo conosce), e scegliendo un indirizzo suggerito il civico scritto non si perde più.
+- **Coordinate per gli operai**: sotto l'indirizzo e nel PDF ci sono le coordinate precise con i link
+  che aprono il navigatore in **Google Maps** e **Apple Maps**, più «Copia». Si vede se il punto è
+  preciso (scelto sulla mappa) o approssimato (preso dall'indirizzo). Nel `dati_….json` sono in `mappe`.
+
 ## Novità della 3.1 (idee prese dai video di fliwoX)
 
 - **«Che misura hai preso?»** per ogni posizione: esterne (fuori telaio), luce muro, finita, altro.
@@ -56,7 +71,7 @@ A gennaio cambia l'anno della cartella in *Impostazioni → Cartella delle comme
 ## Pubblicare una versione nuova
 
 I file dell'app restano in copia sul telefono: perché i telefoni prendano la versione nuova bisogna
-cambiare il numero di versione **in tutti questi punti** (cerca `3.1.0`):
+cambiare il numero di versione **in tutti questi punti** (cerca `3.2.0`):
 
 - `sw.js` → `VERSIONE` e i `?v=` nella lista `FILE_APP` e in `importScripts`
 - `index.html` → i `?v=` di `app.css`, `dbx.js`, `app.js`
@@ -73,5 +88,5 @@ Alla prima apertura con linea l'app mostra «Nuova versione pronta → Aggiorna 
 | `app.js` | il modulo, le schede per tipologia, disegni/foto, mappa, PDF, archivio |
 | `dbx.js` | memoria del telefono (IndexedDB) e coda d'invio a Dropbox (usato anche dal service worker) |
 | `sw.js` | service worker: app offline, mappe già viste, invio in background |
-| `vendor/` | jsPDF 2.5.1 e Leaflet 1.9.4 in locale (prima arrivavano da internet) |
+| `vendor/` | jsPDF 2.5.1, Leaflet 1.9.4 e SheetJS 0.18.5 (lettura della rubrica Excel) in locale |
 | `fonts/` | Inter e Chakra Petch in locale |

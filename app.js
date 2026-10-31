@@ -9,7 +9,7 @@
 (function () {
 'use strict';
 
-var VERSIONE_APP = '3.1.0';
+var VERSIONE_APP = '3.2.0';
 var BASE_PREDEFINITA = '/Ufficio/COMMESSE/Commesse Installazioni 2026';
 var COMMESSE_PREDEFINITE = [
   'C47-SIRYUS SRL', 'C46-Mes group', 'C45-Tonino Russo', 'C44-Teatro Bracco', 'C35-Tecno3-Telai',
@@ -159,7 +159,7 @@ function mediaSrc(m) { return m ? (m.img || m.bg || null) : null; }
 function nuoviDati(rilevatore) {
   return { cliente: '', tel: '', email: '', wa: false, tg: false, via: '', citofono: '', tipoCliente: 'privato', referente: '',
     cantiereDiverso: false, viaCantiere: '', lat: null, lng: null, latCantiere: null, lngCantiere: null,
-    piano: '', mezzoSalita: '', difficolta: '', notePosa: '',
+    piano: '', mezzoSalita: '', difficolta: '', notePosa: '', fonteCoord: '', fonteCoordCantiere: '', rubricaRif: null,
     data: oggiISO(), rilevatore: rilevatore || '', destType: 'lead', destCommessa: '', items: [] };
 }
 function posizioneVuota() {
@@ -411,16 +411,34 @@ $$('[data-diff]').forEach(function (b) {
   b.onclick = function () { S.difficolta = S.difficolta === b.dataset.diff ? '' : b.dataset.diff; aggiornaDifficolta(); salvaPresto(); };
 });
 function aggiornaCantiere() { $('#cantiereWrap').hidden = !S.cantiereDiverso; }
-function linkMappa(lat, lng) { return 'https://www.google.com/maps/search/?api=1&query=' + lat + ',' + lng; }
+/* link che aprono direttamente il navigatore, per gli operai */
+function coordTesto(lat, lng) { return (+lat).toFixed(6) + ', ' + (+lng).toFixed(6); }
+function linkGoogle(lat, lng) { return 'https://www.google.com/maps/dir/?api=1&destination=' + (+lat).toFixed(6) + ',' + (+lng).toFixed(6); }
+function linkApple(lat, lng) { return 'https://maps.apple.com/?daddr=' + (+lat).toFixed(6) + ',' + (+lng).toFixed(6); }
+var CAMPI_POSIZIONE = [['via', 'lat', 'lng', 'fonteCoord'], ['viaCantiere', 'latCantiere', 'lngCantiere', 'fonteCoordCantiere']];
 function aggiornaNoteIndirizzo() {
-  [['via', 'lat', 'lng'], ['viaCantiere', 'latCantiere', 'lngCantiere']].forEach(function (k) {
+  CAMPI_POSIZIONE.forEach(function (k) {
     var n = $('#nota_' + k[0]); if (!n) return;
     var lat = S[k[1]], lng = S[k[2]];
-    if (lat && lng) n.innerHTML = 'Posizione salvata · <a href="' + linkMappa(lat, lng) + '" target="_blank" rel="noopener">apri in Maps</a>' +
-      (/^GPS /.test(S[k[0]] || '') ? ' · l\'indirizzo lo completo quando torna la linea' : '');
-    else n.textContent = '';
+    if (!(lat && lng)) { n.textContent = ''; return; }
+    var fonte = S[k[3]];
+    n.innerHTML = '<span class="coord">' + ic('pin', 'ico-s') + '<span class="tecnico">' + coordTesto(lat, lng) + '</span></span>' +
+      '<a href="' + linkGoogle(lat, lng) + '" target="_blank" rel="noopener">Google Maps</a>' +
+      '<a href="' + linkApple(lat, lng) + '" target="_blank" rel="noopener">Apple Maps</a>' +
+      '<button type="button" class="link-btn" data-copia="' + k[0] + '">Copia</button>' +
+      '<span class="coord-fonte">' + (/^GPS /.test(S[k[0]] || '') ? 'Coordinate salvate col GPS: la via la completo quando torna la linea.' :
+        fonte === 'mappa' ? 'Punto preciso scelto sulla mappa: gli operai arrivano qui.' :
+        'Posizione presa dall\'indirizzo, può essere approssimata: con «Mappa» mettila sul portone giusto.') + '</span>';
   });
 }
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('[data-copia]'); if (!b) return;
+  var k = CAMPI_POSIZIONE.filter(function (x) { return x[0] === b.dataset.copia; })[0]; if (!k) return;
+  var t = coordTesto(S[k[1]], S[k[2]]);
+  var fatto = function () { avviso('Coordinate copiate: ' + t, 'ok'); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(fatto, function () { avviso(t, ''); });
+  else avviso(t, '');
+});
 
 function reqMark(r) { return r === 1 || r === true ? ' <i class="req">*</i>' : r === 'f' ? ' <span class="facolt">(facolt.)</span>' : ''; }
 function idc(i, f, cf) { return 'f' + i + (cf ? 'c' : '') + '_' + f; }
@@ -880,72 +898,182 @@ document.addEventListener('focusout', function (e) {
   setTimeout(function () { if (comboAperta && !comboAperta.input.closest('.combo').contains(document.activeElement)) chiudiCombo(); }, 150);
 });
 
-/* ── Rubrica clienti ─────────────────────────────────────────────────── */
+/* ── Rubrica: quella aziendale ────────────────────────────────────────
+   La fonte unica dei contatti è Ufficio/Rubrica/Rubrica Selvaggia.xlsx su Dropbox
+   (regola dell'8/8/2026). L'app la scarica, ne tiene una copia sul telefono per
+   lavorare senza linea e la riscarica solo quando è cambiata (rev di Dropbox).
+   Accanto c'è la piccola rubrica «del telefono»: i clienti nuovi non ancora
+   registrati nella rubrica aziendale, e per tutti i dettagli che lì non ci sono
+   (WhatsApp/Telegram, citofono, coordinate, piano). */
+var RUBRICA_PREDEFINITA = '/Ufficio/Rubrica/Rubrica Selvaggia.xlsx';
+var rubAz = { contatti: [], rev: null, path: null, scaricataIl: null, errore: null };
+var ORE_AGGIORNA_RUBRICA = 6;
+function normaTel(t) {
+  var x = String(t == null ? '' : t).replace(/[​-‏‪-‮⁠-⁯﻿]/g, '').trim();
+  return /^\d+\.0+$/.test(x) ? x.replace(/\.0+$/, '') : x;
+}
+function daRigaRubrica(r) {
+  var g = function (k) { return String(r[k] == null ? '' : r[k]).trim(); };
+  var nome = g('NOME') || g('REFERENTE'); if (!nome) return null;
+  if (/^DIPENDENTE$/i.test(g('TIPO'))) return null;
+  var paese = g('PAESE').toUpperCase(), cap = g('CAP');
+  if (/^\d{1,4}$/.test(cap) && (!paese || paese === 'IT')) cap = ('00000' + cap).slice(-5); // lo zero iniziale mangiato da Excel
+  var prov = g('PROVINCIA'); prov = /^[A-Za-z]{2}$/.test(prov) ? prov.toUpperCase() : '';
+  var cel = normaTel(g('CELLULARE')), fisso = normaTel(g('TELEFONO')), citta = g('CITTA');
+  return { nome: nome, referente: g('NOME') ? g('REFERENTE') : '', tel: cel || fisso, tel2: cel && fisso && fisso !== cel ? fisso : '',
+    email: g('EMAIL'), via: [g('INDIRIZZO'), citta ? citta + (prov ? ' (' + prov + ')' : '') : '', cap].filter(function (x) { return x; }).join(', '),
+    tipoCliente: g('PIVA') ? 'azienda' : 'privato', piva: g('PIVA'), cf: g('CODICE_FISCALE'), tipo: g('TIPO'), codice: g('CODICE'), aziendale: true };
+}
+function percorsoRubrica() { return imp.rubricaPath || RUBRICA_PREDEFINITA; }
+function caricaXlsx() { return window.XLSX ? Promise.resolve() : caricaScript('vendor/xlsx.mini.min.js'); }
+function rubricaVecchia(ore) { return !rubAz.scaricataIl || rubAz.path !== percorsoRubrica() || (Date.now() - (rubAz.controllataIl || rubAz.scaricataIl)) > ore * 3600000; }
+var rubricaInCorso = null;
+function aggiornaRubricaAziendale(forza) {
+  if (rubricaInCorso) return rubricaInCorso;
+  if (!online()) return Promise.resolve({ esito: 'offline' });
+  rubricaInCorso = DFDropbox.collegato().then(function (coll) {
+    if (!coll) return { esito: 'noncoll' };
+    var path = percorsoRubrica();
+    return DFDropbox.metadati(path).then(function (m) {
+      if (!forza && rubAz.rev && m.rev === rubAz.rev && rubAz.path === path) {
+        rubAz.controllataIl = Date.now(); rubAz.errore = null;
+        return kvSet('rubricaAziendale', rubAz).then(function () { return { esito: 'uguale', n: rubAz.contatti.length }; });
+      }
+      return Promise.all([DFDropbox.scarica(path), caricaXlsx()]).then(function (r) {
+        var wb = XLSX.read(new Uint8Array(r[0]), { type: 'array' });
+        var righe = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '', raw: false });
+        if (!righe.length || !('NOME' in righe[0])) throw new Error('il file non ha la colonna NOME: è la rubrica giusta?');
+        var contatti = righe.map(daRigaRubrica).filter(Boolean);
+        rubAz = { contatti: contatti, rev: m.rev, path: path, scaricataIl: Date.now(), controllataIl: Date.now(), modificataIl: m.server_modified, errore: null };
+        return kvSet('rubricaAziendale', rubAz).then(function () { return { esito: 'scaricata', n: contatti.length }; });
+      });
+    });
+  }).catch(function (e) { rubAz.errore = e.message; return { esito: 'errore', errore: e.message }; })
+    .then(function (r) { rubricaInCorso = null; return r; });
+  return rubricaInCorso;
+}
+function chiaveTesto(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+function stessoNome(a, b) { return chiaveTesto(a).trim() === chiaveTesto(b).trim(); }
+function locale(nome) { return rubrica.filter(function (x) { return stessoNome(x.nome, nome); })[0]; }
+function cercaContatti(q, max) {
+  var t = chiaveTesto(q).trim(); if (!t) return [];
+  var parole = t.split(/\s+/), cifre = t.replace(/\D/g, '');
+  var visti = {}, out = [];
+  // prima quelli aziendali; quelli del telefono solo se non sono già in rubrica aziendale
+  rubAz.contatti.concat(rubrica.filter(function (c) { return !c.inAziendale; })).forEach(function (c) {
+    var n = chiaveTesto(c.nome), tutto = n + ' ' + chiaveTesto(c.referente) + ' ' + chiaveTesto(c.via) + ' ' + chiaveTesto(c.piva);
+    var punti = n.indexOf(t) === 0 ? 0 : n.split(/\s+/).some(function (w) { return w.indexOf(parole[0]) === 0; }) && parole.every(function (w) { return tutto.indexOf(w) >= 0; }) ? 1 :
+      parole.every(function (w) { return tutto.indexOf(w) >= 0; }) ? 2 : -1;
+    if (punti < 0 && cifre.length >= 4 && (String(c.tel).replace(/\D/g, '') + ' ' + String(c.tel2 || '').replace(/\D/g, '')).indexOf(cifre) >= 0) punti = 2;
+    if (punti < 0) return;
+    var chiave = n + '|' + (c.aziendale ? 'a' : 't'); if (visti[chiave]) return; visti[chiave] = 1;
+    out.push({ c: c, p: punti });
+  });
+  out.sort(function (a, b) { return a.p - b.p || a.c.nome.localeCompare(b.c.nome, 'it'); });
+  return out.slice(0, max || 50).map(function (x) { return x.c; });
+}
 function dettaglioContatto(c) {
   var p = [];
-  if (c.tipoCliente === 'azienda') p.push('Azienda'); else if (c.tipoCliente === 'rivenditore') p.push('Rivenditore');
+  if (c.tipo) p.push(c.tipo.charAt(0) + c.tipo.slice(1).toLowerCase());
+  else if (c.tipoCliente === 'azienda') p.push('Azienda'); else if (c.tipoCliente === 'rivenditore') p.push('Rivenditore');
   if (c.tel) p.push(c.tel); if (c.via) p.push(c.via);
+  if (c.referente) p.push((c.tipoCliente === 'rivenditore' ? 'Cliente finale: ' : 'Ref: ') + c.referente);
   return p.join(' · ');
 }
 function suggerisciRubrica(input) {
-  var q = input.value.trim().toLowerCase();
-  if (q.length < 2 || !rubrica.length) { if (comboAperta && comboAperta.input === input) chiudiCombo(); return; }
-  var trovati = rubrica.filter(function (c) { return (c.nome || '').toLowerCase().indexOf(q) >= 0 || (c.tel || '').replace(/\s/g, '').indexOf(q.replace(/\s/g, '')) >= 0; }).slice(0, 8);
+  var q = input.value.trim();
+  if (q.length < 2) { if (comboAperta && comboAperta.input === input) chiudiCombo(); return; }
+  var trovati = cercaContatti(q, 8);
   if (!trovati.length) { if (comboAperta && comboAperta.input === input) chiudiCombo(); return; }
-  apriCombo(input, '', trovati.map(function (c) { return { v: c.nome, dett: dettaglioContatto(c), scegli: function () { compilaDaContatto(c); } }; }));
+  apriCombo(input, '', trovati.map(function (c) {
+    return { v: c.nome, etichetta: c.nome + (c.aziendale ? '' : '  · sul telefono'), dett: dettaglioContatto(c), scegli: function () { compilaDaContatto(c); } };
+  }));
 }
 function compilaDaContatto(c) {
-  ['cliente', 'tel', 'email', 'via', 'citofono', 'referente', 'viaCantiere'].forEach(function (k) { S[k] = (k === 'cliente' ? c.nome : c[k]) || ''; });
-  ['piano', 'mezzoSalita'].forEach(function (k) { if (c[k]) S[k] = c[k]; });
-  if (!S.citofono && c.vianote) S.citofono = c.vianote;
-  S.wa = !!c.wa; S.tg = !!c.tg; S.tipoCliente = c.tipoCliente || 'privato'; S.cantiereDiverso = !!c.cantiereDiverso;
-  S.lat = c.lat == null ? null : c.lat; S.lng = c.lng == null ? null : c.lng;
-  S.latCantiere = c.latCantiere == null ? null : c.latCantiere; S.lngCantiere = c.lngCantiere == null ? null : c.lngCantiere;
+  var tel = c.aziendale ? locale(c.nome) : c;   // dettagli in più tenuti sul telefono
+  tel = tel || {};
+  S.cliente = c.nome; S.tel = c.tel || tel.tel || ''; S.email = c.email || tel.email || ''; S.via = c.via || tel.via || '';
+  S.referente = c.referente || tel.referente || ''; S.tipoCliente = tel.tipoCliente === 'rivenditore' ? 'rivenditore' : (c.tipoCliente || 'privato');
+  S.citofono = tel.citofono || tel.vianote || ''; S.wa = !!tel.wa; S.tg = !!tel.tg;
+  S.cantiereDiverso = !!tel.cantiereDiverso; S.viaCantiere = tel.viaCantiere || '';
+  // le coordinate del telefono valgono solo se l'indirizzo è lo stesso
+  var stessoIndirizzo = !c.aziendale || !tel.via || chiaveTesto(tel.via) === chiaveTesto(S.via);
+  S.lat = stessoIndirizzo && tel.lat != null ? tel.lat : null; S.lng = stessoIndirizzo && tel.lng != null ? tel.lng : null;
+  S.fonteCoord = S.lat ? (tel.fonteCoord || 'indirizzo') : '';
+  S.latCantiere = tel.latCantiere == null ? null : tel.latCantiere; S.lngCantiere = tel.lngCantiere == null ? null : tel.lngCantiere;
+  S.fonteCoordCantiere = S.latCantiere ? (tel.fonteCoordCantiere || 'indirizzo') : '';
+  ['piano', 'mezzoSalita'].forEach(function (k) { if (tel[k]) S[k] = tel[k]; });
+  S.rubricaRif = c.aziendale ? { nome: c.nome, codice: c.codice || '', piva: c.piva || '', cf: c.cf || '' } : null;
   disegnaTestata(); salvaPresto();
-  avviso('Dati di ' + c.nome + ' presi dalla rubrica', 'ok');
+  avviso('Dati di ' + c.nome + ' presi dalla ' + (c.aziendale ? 'rubrica aziendale' : 'rubrica del telefono'), 'ok');
 }
+/* sul telefono si tengono i dettagli che la rubrica aziendale non ha; i clienti nuovi restano qui finché non li registri */
 function salvaInRubrica() {
   var nome = (S.cliente || '').trim(); if (!nome) return Promise.resolve();
+  var inAz = !!S.rubricaRif || rubAz.contatti.some(function (x) { return stessoNome(x.nome, nome); });
   var c = { nome: nome, tel: S.tel, email: S.email, wa: S.wa, tg: S.tg, via: S.via, citofono: S.citofono, tipoCliente: S.tipoCliente, referente: S.referente,
-    piano: S.piano, mezzoSalita: S.mezzoSalita,
-    cantiereDiverso: S.cantiereDiverso, viaCantiere: S.viaCantiere, lat: S.lat, lng: S.lng, latCantiere: S.latCantiere, lngCantiere: S.lngCantiere };
-  var k = rubrica.findIndex(function (x) { return (x.nome || '').toLowerCase().trim() === nome.toLowerCase(); });
+    piano: S.piano, mezzoSalita: S.mezzoSalita, inAziendale: inAz,
+    cantiereDiverso: S.cantiereDiverso, viaCantiere: S.viaCantiere, lat: S.lat, lng: S.lng, fonteCoord: S.fonteCoord,
+    latCantiere: S.latCantiere, lngCantiere: S.lngCantiere, fonteCoordCantiere: S.fonteCoordCantiere, aggiornatoIl: Date.now() };
+  var k = rubrica.findIndex(function (x) { return stessoNome(x.nome, nome); });
   if (k >= 0) rubrica[k] = c; else rubrica.push(c);
   return kvSet('rubrica', rubrica);
 }
+function statoRubricaHtml() {
+  if (rubAz.scaricataIl) return '<b>Rubrica aziendale · ' + rubAz.contatti.length.toLocaleString('it-IT') + ' contatti</b>Aggiornata ' + quando(rubAz.controllataIl || rubAz.scaricataIl) +
+    (rubAz.errore ? ' · ultimo aggiornamento non riuscito: ' + esc(rubAz.errore) : '') + (online() ? '' : ' · senza linea uso la copia sul telefono');
+  if (rubAz.errore) return '<b>Rubrica aziendale non scaricata</b>' + esc(rubAz.errore);
+  return '<b>Rubrica aziendale non ancora scaricata</b>Serve Dropbox collegato e la linea: la scarico da ' + esc(percorsoRubrica()) + '.';
+}
 $('#btnRubrica').onclick = apriRubrica;
 function apriRubrica() {
-  var voce = pannello('Rubrica clienti',
-    '<div class="campo" style="margin-bottom:6px"><label class="sr-only" for="rubCerca">Cerca</label><input class="input" id="rubCerca" type="search" placeholder="Cerca per nome o telefono" autocomplete="off"></div><div id="rubLista"></div>',
-    '<button class="btn btn-primary btn-lg btn-block" type="button" id="rubAggiungi">' + ic('piu', 'ico-s') + 'Salva il cliente di questo rilievo</button>');
-  var el = voce.el;
+  var voce = pannello('Rubrica',
+    '<div class="percorso" id="rubStato" style="margin:0 0 10px"></div>' +
+    '<button class="btn btn-secondary btn-block" type="button" id="rubAggiorna" style="margin-bottom:10px">' + ic('aggiorna', 'ico-s') + 'Aggiorna dalla rubrica aziendale</button>' +
+    '<div class="campo" style="margin-bottom:6px"><label class="sr-only" for="rubCerca">Cerca</label><input class="input" id="rubCerca" type="search" placeholder="Cerca nome, telefono, città o P.IVA" autocomplete="off"></div><div id="rubLista"></div>',
+    '<button class="btn btn-primary btn-lg btn-block" type="button" id="rubAggiungi">' + ic('piu', 'ico-s') + 'Salva il cliente di questo rilievo sul telefono</button>');
+  var el = voce.el, mostrati = [];
+  function riga(c, k) {
+    return '<div class="riga-c"><div class="info" data-scegli="' + k + '" role="button" tabindex="0"><h3>' + esc(c.nome) + '</h3><p>' + esc(dettaglioContatto(c)) + '</p>' +
+      (c.aziendale ? '' : '<p><span class="tag tag-coda">Sul telefono · da registrare in rubrica aziendale</span></p>') + '</div>' +
+      '<button class="btn btn-secondary btn-piccolo" type="button" data-scegli="' + k + '">Scegli</button>' +
+      (c.aziendale ? '' : '<button class="btn btn-icona btn-pericolo" type="button" data-togli="' + k + '" aria-label="Togli ' + esc(c.nome) + ' dal telefono">' + ic('cestino', 'ico-s') + '</button>') + '</div>';
+  }
   function elenca() {
-    var q = $('#rubCerca', el).value.trim().toLowerCase();
-    var l = rubrica.filter(function (c) { return !q || (c.nome || '').toLowerCase().indexOf(q) >= 0 || (c.tel || '').indexOf(q) >= 0; })
-      .sort(function (a, b) { return (a.nome || '').localeCompare(b.nome || '', 'it'); });
-    $('#rubLista', el).innerHTML = l.length ? l.map(function (c) {
-      var k = rubrica.indexOf(c);
-      return '<div class="riga-c"><div class="info" data-scegli="' + k + '" role="button" tabindex="0"><h3>' + esc(c.nome) + '</h3><p>' + esc(dettaglioContatto(c)) +
-        (c.referente ? ' · ' + (c.tipoCliente === 'rivenditore' ? 'Cliente finale: ' : 'Ref: ') + esc(c.referente) : '') + '</p></div>' +
-        '<button class="btn btn-secondary btn-piccolo" type="button" data-scegli="' + k + '">Scegli</button>' +
-        '<button class="btn btn-icona btn-pericolo" type="button" data-togli="' + k + '" aria-label="Togli ' + esc(c.nome) + ' dalla rubrica">' + ic('cestino', 'ico-s') + '</button></div>';
-    }).join('') : '<div class="vuoto"><strong>Nessun contatto</strong>I clienti si aggiungono da soli quando fai un PDF o salvi su Dropbox.</div>';
+    $('#rubStato', el).innerHTML = statoRubricaHtml();
+    var q = $('#rubCerca', el).value.trim();
+    if (q) mostrati = cercaContatti(q, 60);
+    else mostrati = rubrica.filter(function (c) { return !c.inAziendale; }).sort(function (a, b) { return (b.aggiornatoIl || 0) - (a.aggiornatoIl || 0); }).slice(0, 30);
+    $('#rubLista', el).innerHTML = (!q ? '<p class="campo-nota" style="margin:4px 0 8px">' + (rubAz.contatti.length ? 'Scrivi per cercare fra i ' + rubAz.contatti.length.toLocaleString('it-IT') + ' contatti della rubrica aziendale.' : '') +
+        (mostrati.length ? ' Qui sotto i clienti nuovi salvati solo sul telefono.' : '') + '</p>' : '') +
+      (mostrati.length ? mostrati.map(riga).join('') : (q ? '<div class="vuoto"><strong>Nessun contatto trovato</strong>Controlla come è scritto, o cerca per telefono o città.</div>' : ''));
   }
   elenca();
+  if (rubricaVecchia(0.5)) aggiornaRubricaAziendale(false).then(elenca);
   $('#rubCerca', el).oninput = elenca;
+  $('#rubAggiorna', el).onclick = function () {
+    var b = this; if (!online()) { avviso('Senza linea uso la copia sul telefono', 'offline'); return; }
+    var lib = occupa(b, 'Scarico…');
+    aggiornaRubricaAziendale(true).then(function (r) {
+      lib(); elenca();
+      if (r.esito === 'scaricata' || r.esito === 'uguale') avviso('Rubrica aziendale aggiornata: ' + rubAz.contatti.length + ' contatti', 'ok');
+      else if (r.esito === 'noncoll') { avviso('Collega prima Dropbox dalle impostazioni', 'errore'); }
+      else avviso('Rubrica non aggiornata: ' + (r.errore || r.esito), 'errore', 6000);
+    });
+  };
   el.addEventListener('click', function (e) {
-    var s = e.target.closest('[data-scegli]'), t = e.target.closest('[data-togli]');
-    if (s) { compilaDaContatto(rubrica[+s.dataset.scegli]); chiudiOverlay(voce); }
+    var s2 = e.target.closest('[data-scegli]'), t = e.target.closest('[data-togli]');
+    if (s2) { compilaDaContatto(mostrati[+s2.dataset.scegli]); chiudiOverlay(voce); }
     else if (t) {
-      var c = rubrica[+t.dataset.togli];
-      conferma('Togliere ' + c.nome + ' dalla rubrica?', 'I rilievi già fatti non cambiano.', 'Togli').then(function (ok) {
+      var c = mostrati[+t.dataset.togli];
+      conferma('Togliere ' + c.nome + ' dal telefono?', 'I rilievi già fatti non cambiano. La rubrica aziendale non viene toccata.', 'Togli').then(function (ok) {
         if (!ok) return; rubrica.splice(rubrica.indexOf(c), 1); kvSet('rubrica', rubrica); elenca();
       });
     }
   });
   $('#rubAggiungi', el).onclick = function () {
     if (!S.cliente.trim()) { avviso('Scrivi prima il nome del cliente', 'errore'); return; }
-    salvaInRubrica().then(function () { elenca(); avviso(S.cliente + ' salvato in rubrica', 'ok'); });
+    salvaInRubrica().then(function () { elenca(); avviso(S.cliente + ' salvato sul telefono', 'ok'); });
   };
 }
 
@@ -962,9 +1090,23 @@ function cercaIndirizzi(q) {
   return fetch(NOMINATIM + 'search?format=json&addressdetails=1&countrycodes=it&limit=5&accept-language=it&q=' + encodeURIComponent(q) + '&email=fioreinstallazioni@gmail.com')
     .then(function (r) { return r.json(); });
 }
-function indirizzoDaCoordinate(lat, lng) {
-  return fetch(NOMINATIM + 'reverse?format=json&accept-language=it&lat=' + lat + '&lon=' + lng + '&email=fioreinstallazioni@gmail.com')
-    .then(function (r) { return r.json(); }).then(function (d) { return formattaIndirizzo(d.address) || d.display_name || ''; });
+function datiDaCoordinate(lat, lng) {
+  return fetch(NOMINATIM + 'reverse?format=json&addressdetails=1&zoom=18&accept-language=it&lat=' + lat + '&lon=' + lng + '&email=fioreinstallazioni@gmail.com')
+    .then(function (r) { return r.json(); });
+}
+function indirizzoDaCoordinate(lat, lng, civico) {
+  return datiDaCoordinate(lat, lng).then(function (d) { return conCivico(d.address, civico) || d.display_name || ''; });
+}
+/* il numero civico: OpenStreetMap spesso non lo conosce, quindi si tiene quello scritto */
+function estraiCivico(testo) {
+  var t = String(testo || ''), g = t.match(/civico\s+(\S+)/i); if (g) return g[1];
+  var m = t.split(',')[0].trim().match(/\s(\d+\s?[A-Za-z]?(?:\/\s?[A-Za-z0-9]+)?)$/);
+  return m ? m[1].replace(/\s+/g, '') : '';
+}
+function conCivico(a, civico) {
+  if (!a) return '';
+  var b = Object.assign({}, a); if (civico) b.house_number = civico;
+  return formattaIndirizzo(b);
 }
 var timerIndirizzo = null;
 function suggerisciIndirizzo(input) {
@@ -976,11 +1118,12 @@ function suggerisciIndirizzo(input) {
     cercaIndirizzi(q).then(function (arr) {
       if (input.value.trim() !== q || document.activeElement !== input) return;
       if (!arr || !arr.length) { if (comboAperta && comboAperta.input === input) chiudiCombo(); return; }
+      var civScritto = estraiCivico(q);
       apriCombo(input, '', arr.map(function (a) {
-        var f = formattaIndirizzo(a.address) || a.display_name;
+        var f = (a.address && !a.address.house_number && civScritto ? conCivico(a.address, civScritto) : formattaIndirizzo(a.address)) || a.display_name;
         return { v: f, scegli: function () {
           input.value = f; S[campo] = f; input.removeAttribute('aria-invalid');
-          if (campo === 'via') { S.lat = +a.lat; S.lng = +a.lon; } else { S.latCantiere = +a.lat; S.lngCantiere = +a.lon; }
+          if (campo === 'via') { S.lat = +a.lat; S.lng = +a.lon; S.fonteCoord = 'indirizzo'; } else { S.latCantiere = +a.lat; S.lngCantiere = +a.lon; S.fonteCoordCantiere = 'indirizzo'; }
           aggiornaNoteIndirizzo(); salvaPresto();
         } };
       }));
@@ -993,7 +1136,7 @@ function completaIndirizziGps() {
   [['via', 'lat', 'lng'], ['viaCantiere', 'latCantiere', 'lngCantiere']].forEach(function (k) {
     if (/^GPS /.test(S[k[0]] || '') && S[k[1]] && S[k[2]]) {
       var idRil = rec.id;
-      indirizzoDaCoordinate(S[k[1]], S[k[2]]).then(function (ind) {
+      indirizzoDaCoordinate(S[k[1]], S[k[2]], estraiCivico(S[k[0]])).then(function (ind) {
         if (!ind || !rec || rec.id !== idRil || !/^GPS /.test(S[k[0]] || '')) return;
         S[k[0]] = ind; var el = $('[data-h="' + k[0] + '"]'); if (el) el.value = ind;
         aggiornaNoteIndirizzo(); salvaPresto();
@@ -1014,8 +1157,18 @@ function caricaLeaflet() {
 }
 $$('[data-mappa]').forEach(function (b) { b.onclick = function () { apriMappa(b.dataset.mappa); }; });
 function testoMappa(t) { $('#mappaIndirizzo').textContent = t; }
+var ultimoReverse = null;   // { lat, lng, address } dell'ultimo punto scelto
+function anteprimaMappa() {
+  if (!sceltaMappa) return;
+  var civ = $('#mappaCivico').value.trim();
+  if (ultimoReverse && ultimoReverse.lat === sceltaMappa.lat) testoMappa(conCivico(ultimoReverse.address, civ) || coordTesto(sceltaMappa.lat, sceltaMappa.lng));
+}
+$('#mappaCivico').addEventListener('input', anteprimaMappa);
 function apriMappa(campo) {
   campoMappa = campo;
+  var scrittoPrima = S[campo] || '';
+  $('#mappaCivico').value = estraiCivico(scrittoPrima);
+  ultimoReverse = null;
   $('#mappa').hidden = false; document.body.classList.add('bloccato'); spingiStoria();
   var lat = campo === 'via' ? S.lat : S.latCantiere, lng = campo === 'via' ? S.lng : S.lngCantiere;
   var start = lat && lng ? [lat, lng] : [40.8518, 14.2681], zoom = lat && lng ? 17 : 12;
@@ -1050,8 +1203,13 @@ function scegliPunto(lat, lng) {
   clearTimeout(timerAnteprima);
   if (!online()) return;
   timerAnteprima = setTimeout(function () {
-    indirizzoDaCoordinate(lat, lng).then(function (t) { if (sceltaMappa && sceltaMappa.lat === lat) testoMappa(t || (lat.toFixed(6) + ', ' + lng.toFixed(6))); })
-      .catch(function () { testoMappa(lat.toFixed(6) + ', ' + lng.toFixed(6)); });
+    datiDaCoordinate(lat, lng).then(function (d) {
+      if (!sceltaMappa || sceltaMappa.lat !== lat) return;
+      ultimoReverse = { lat: lat, lng: lng, address: d.address, nome: d.display_name };
+      var inp = $('#mappaCivico');
+      if (d.address && d.address.house_number && !inp.value.trim()) inp.value = d.address.house_number;
+      anteprimaMappa();
+    }).catch(function () { testoMappa(coordTesto(lat, lng)); });
   }, 500);
 }
 function gpsSuMappa() {
@@ -1072,18 +1230,22 @@ function chiudiMappa(daStoria) {
 $('#mappaChiudi').onclick = function () { chiudiMappa(); };
 $('#mappaConferma').onclick = function () {
   if (!sceltaMappa) { chiudiMappa(); return; }
-  var c = campoMappa, lat = sceltaMappa.lat, lng = sceltaMappa.lng;
-  if (c === 'via') { S.lat = lat; S.lng = lng; } else { S.latCantiere = lat; S.lngCantiere = lng; }
+  var c = campoMappa, lat = sceltaMappa.lat, lng = sceltaMappa.lng, civ = $('#mappaCivico').value.trim();
+  if (c === 'via') { S.lat = lat; S.lng = lng; S.fonteCoord = 'mappa'; } else { S.latCantiere = lat; S.lngCantiere = lng; S.fonteCoordCantiere = 'mappa'; }
   var input = $('[data-h="' + c + '"]');
   var metti = function (t) { input.value = t; S[c] = t; input.removeAttribute('aria-invalid'); aggiornaNoteIndirizzo(); salvaPresto(); };
-  var segnaposto = 'GPS ' + lat.toFixed(5) + ', ' + lng.toFixed(5);
+  var segnaposto = 'GPS ' + lat.toFixed(5) + ', ' + lng.toFixed(5) + (civ ? ' · civico ' + civ : '');
   chiudiMappa();
   if (!online()) {
     if (!S[c] || /^GPS /.test(S[c])) metti(segnaposto); else { aggiornaNoteIndirizzo(); salvaPresto(); }
-    avviso('Posizione salvata. L\'indirizzo lo completo quando torna la linea', 'offline', 3500);
+    avviso('Coordinate salvate. La via la completo quando torna la linea', 'offline', 3500);
     return;
   }
-  indirizzoDaCoordinate(lat, lng).then(function (t) { metti(t || segnaposto); }).catch(function () { metti(S[c] && !/^GPS /.test(S[c]) ? S[c] : segnaposto); });
+  var pronto = ultimoReverse && ultimoReverse.lat === lat ? Promise.resolve(conCivico(ultimoReverse.address, civ)) : indirizzoDaCoordinate(lat, lng, civ);
+  pronto.then(function (t) {
+    metti(t || segnaposto);
+    if (!civ) avviso('Manca il numero civico: aggiungilo nell\'indirizzo', 'errore', 4000);
+  }).catch(function () { metti(S[c] && !/^GPS /.test(S[c]) ? S[c] : segnaposto); });
 };
 
 /* ── Foto: scatta o scegli dalla galleria ────────────────────────────── */
@@ -1448,15 +1610,22 @@ function creaPdf() {
     var posa = [S.piano, S.mezzoSalita ? 'salita: ' + S.mezzoSalita : '', S.difficolta ? 'difficoltà ' + S.difficolta : ''].filter(Boolean).join(' - ');
     if (posa) righeCli.push(['Posa e logistica', posa]);
     if (S.notePosa) righeCli.push(['Note per la posa', S.notePosa]);
+    if (S.lat && S.lng) righeCli.push([S.cantiereDiverso ? 'Posizione cliente' : 'Posizione', coordTesto(S.lat, S.lng), [S.lat, S.lng]]);
+    if (S.cantiereDiverso && S.latCantiere && S.lngCantiere) righeCli.push(['Posizione cantiere', coordTesto(S.latCantiere, S.lngCantiere), [S.latCantiere, S.lngCantiere]]);
     doc.setFontSize(9.5);
     var LBL = 32, larg = W - 8 - LBL;
-    var blocchi = righeCli.map(function (r) { F('normal'); return [r[0], doc.splitTextToSize(pdfTxt(r[1]) || '-', larg)]; });
+    var blocchi = righeCli.map(function (r) { F('normal'); return [r[0], doc.splitTextToSize(pdfTxt(r[1]) || '-', larg), r[2]]; });
     var hBox = 6 + blocchi.reduce(function (t, b) { return t + b[1].length * 4.4 + 1; }, 0) + 6;
     doc.setFillColor(SUP[0], SUP[1], SUP[2]); doc.rect(M, y, W, hBox, 'F');
     var yy = y + 6;
     blocchi.forEach(function (b) {
       col(GRIGIO); F('bold'); doc.setFontSize(8); testo(b[0].toUpperCase(), M + 4, yy);
       col(TESTO); F('normal'); doc.setFontSize(9.5); doc.text(b[1], M + 4 + LBL, yy);
+      if (b[2]) { // link che aprono il navigatore
+        var xl = M + 4 + LBL + doc.getTextWidth(b[1][0]) + 4; col(INK);
+        doc.textWithLink('Google Maps', xl, yy, { url: linkGoogle(b[2][0], b[2][1]) }); xl += doc.getTextWidth('Google Maps') + 4;
+        doc.textWithLink('Apple Maps', xl, yy, { url: linkApple(b[2][0], b[2][1]) });
+      }
       yy += b[1].length * 4.4 + 1;
     });
     var totPz = S.items.reduce(function (t, it) { return t + pz(it); }, 0);
@@ -1659,6 +1828,10 @@ function jsonPerDropbox(base) {
   var fix = function (m) { if (m) m.img = m.img || m.bg || null; return m; };
   d.items.forEach(function (it) { fix(it.disegno); it.foto.forEach(fix); fix(it.cas.disegno); it.cas.foto.forEach(fix); });
   d.dropbox_folder = base; d.id_rilievo = rec.id; d.versione_app = VERSIONE_APP; d.salvato_il = new Date().toISOString();
+  d.cliente_in_rubrica_aziendale = !!S.rubricaRif;
+  d.mappe = {};
+  if (S.lat && S.lng) d.mappe.cliente = { lat: S.lat, lng: S.lng, preciso: S.fonteCoord === 'mappa', google: linkGoogle(S.lat, S.lng), apple: linkApple(S.lat, S.lng) };
+  if (S.cantiereDiverso && S.latCantiere && S.lngCantiere) d.mappe.cantiere = { lat: S.latCantiere, lng: S.lngCantiere, preciso: S.fonteCoordCantiere === 'mappa', google: linkGoogle(S.latCantiere, S.lngCantiere), apple: linkApple(S.latCantiere, S.lngCantiere) };
   return JSON.stringify(d, null, 2);
 }
 function mettiInCoda() {
@@ -1835,6 +2008,10 @@ function apriImpostazioni() {
       '<div class="campi g1"><div class="campo"><label for="impBase">Cartella delle commesse</label><input id="impBase" value="' + esc(imp.cartellaBase || BASE_PREDEFINITA) + '" autocomplete="off" spellcheck="false">' +
       '<p class="campo-nota">I nuovi clienti vanno in <b>…/Lead/Nome cliente</b>, le commesse nella loro cartella. A gennaio cambia l\'anno qui.</p></div></div>' +
       '<div class="scelte" style="margin-top:10px"><label class="chip"><input type="checkbox" id="impFoto"' + (imp.fotoJpg !== false ? ' checked' : '') + '>' + SPUNTA + 'Carica anche le foto come file JPG</label></div>' +
+      '<h3 class="sez-titolo">Rubrica aziendale</h3>' +
+      '<div class="percorso" style="margin:0 0 10px">' + statoRubricaHtml() + '</div>' +
+      '<div class="campi g1"><div class="campo"><label for="impRubrica">File della rubrica su Dropbox</label><input id="impRubrica" value="' + esc(percorsoRubrica()) + '" autocomplete="off" spellcheck="false">' +
+      '<p class="campo-nota">È la fonte unica dei contatti. L\'app la legge e ne tiene una copia per lavorare senza linea; non la modifica.</p></div></div>' +
       '<h3 class="sez-titolo">Copia di sicurezza</h3>' +
       '<p class="campo-nota" style="margin-bottom:10px">Salva tutti i rilievi e la rubrica in un file, o ripristinali (anche i file «dati_….json» di Dropbox).</p>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-secondary" type="button" id="impEsporta">' + ic('scarica', 'ico-s') + 'Esporta backup</button>' +
@@ -1849,6 +2026,10 @@ function apriImpostazioni() {
         });
         $('#impBase', el).onchange = function () { var v = this.value.trim(); imp.cartellaBase = v ? '/' + v.replace(/^\/+/, '').replace(/\/+$/, '') : BASE_PREDEFINITA; this.value = imp.cartellaBase; kvSet('impostazioni', imp); aggiornaRiepilogoStato(); };
         $('#impFoto', el).onchange = function () { imp.fotoJpg = this.checked; kvSet('impostazioni', imp); };
+        $('#impRubrica', el).onchange = function () {
+          var v = this.value.trim(); imp.rubricaPath = v ? '/' + v.replace(/^\/+/, '') : RUBRICA_PREDEFINITA; this.value = imp.rubricaPath;
+          kvSet('impostazioni', imp); aggiornaRubricaAziendale(true).then(function (r) { if (r.esito === 'errore') avviso('Rubrica: ' + r.errore, 'errore', 6000); else if (r.n) avviso('Rubrica aziendale: ' + r.n + ' contatti', 'ok'); });
+        };
         $('#impEsporta', el).onclick = esportaBackup;
         $('#impImporta', el).onclick = importaBackup;
         var aut = $('#dbxAutorizza', el);
@@ -1871,7 +2052,7 @@ function apriImpostazioni() {
           var code = $('#dbxCodice', el).value.trim(); if (!code) { $('#dbxCodice', el).focus(); return; }
           var lib = occupa(conf, 'Collego…');
           DFDropbox.scambiaCodice(code).then(function () {
-            lib(); chiudiOverlay(); avviso('Dropbox collegato ✓', 'ok'); aggiornaCommesse(false); provaInvio('collegato');
+            lib(); chiudiOverlay(); avviso('Dropbox collegato ✓', 'ok'); aggiornaCommesse(false); provaInvio('collegato'); aggiornaRubricaAziendale(true);
           }, function (e) { lib(); avviso('Collegamento non riuscito: ' + e.message, 'errore', 6000); });
         };
         var sc = $('#dbxScollega', el);
@@ -1930,6 +2111,7 @@ function aggiornaRete() {
 window.addEventListener('online', function () {
   aggiornaRete(); avviso('Linea tornata: invio quello che è in coda', 'ok');
   completaIndirizziGps(); provaInvio('online');
+  if (rubricaVecchia(ORE_AGGIORNA_RUBRICA)) aggiornaRubricaAziendale(false);
 });
 window.addEventListener('offline', function () { aggiornaRete(); avviso('Sei senza linea: continuo a salvare sul telefono', 'offline', 3500); });
 document.addEventListener('visibilitychange', function () {
@@ -1971,10 +2153,11 @@ function avvia() {
   aggiornaRete();
   DFStore.openDB().catch(function () { memoriaDiRiserva(); })
     .then(function () { return migraDallaV2().catch(function () { return null; }); })
-    .then(function () { return Promise.all([kvGet('impostazioni'), kvGet('rubrica'), kvGet('commesse'), kvGet('aperto')]); })
+    .then(function () { return Promise.all([kvGet('impostazioni'), kvGet('rubrica'), kvGet('commesse'), kvGet('aperto'), kvGet('rubricaAziendale')]); })
     .then(function (r) {
       if (r[0]) imp = Object.assign(imp, r[0]);
       rubrica = Array.isArray(r[1]) ? r[1] : [];
+      if (r[4] && Array.isArray(r[4].contatti)) rubAz = r[4];
       if (Array.isArray(r[2]) && r[2].length) commesse = r[2];
       var aperto = r[3];
       return (aperto ? apriRilievo(aperto) : Promise.resolve(false)).then(function (ok) {
@@ -1991,6 +2174,7 @@ function avvia() {
       if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function () {});
       completaIndirizziGps();
       provaInvio('avvio');
+      if (rubricaVecchia(ORE_AGGIORNA_RUBRICA)) aggiornaRubricaAziendale(false);
       registraSW();
     })
     .catch(function (e) { avviso('Errore all\'avvio: ' + (e && e.message || e), 'errore', 9000); });
@@ -1998,5 +2182,5 @@ function avvia() {
 avvia();
 
 /* per i collaudi */
-window.__rilievo = { get S() { return S; }, get rec() { return rec; }, creaPdf: creaPdf, controllaCampi: controllaCampi, categoria: categoria, VERSIONE: VERSIONE_APP };
+window.__rilievo = { get S() { return S; }, get rec() { return rec; }, get rubAz() { return rubAz; }, cercaContatti: cercaContatti, aggiornaRubricaAziendale: aggiornaRubricaAziendale, estraiCivico: estraiCivico, creaPdf: creaPdf, controllaCampi: controllaCampi, categoria: categoria, VERSIONE: VERSIONE_APP };
 })();

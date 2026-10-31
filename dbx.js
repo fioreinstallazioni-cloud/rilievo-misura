@@ -175,6 +175,30 @@
     });
   }
 
+  /* metadati di un file (serve la «rev» per non riscaricare un file che non è cambiato) */
+  function metadati(path) {
+    return token().then(function (tk) {
+      return chiamaApi('https://api.dropboxapi.com/2/files/get_metadata', { path: path }, tk);
+    }).then(function (r) {
+      if (r.ok) return r.json();
+      return r.text().then(function (t) {
+        if (r.status === 409 && /not_found/.test(t)) throw errore('dropbox', 'File non trovato su Dropbox: ' + path);
+        throw errore(r.status >= 500 ? 'rete' : 'dropbox', 'Dropbox non risponde (' + r.status + ')');
+      });
+    });
+  }
+  /* scarica un file intero (la rubrica aziendale) */
+  function scarica(path) {
+    return token().then(function (tk) {
+      return fetchT('https://content.dropboxapi.com/2/files/download', {
+        method: 'POST', headers: { 'Authorization': 'Bearer ' + tk, 'Dropbox-API-Arg': asciiSafe(JSON.stringify({ path: path })) }
+      }, 60000);
+    }).then(function (r) {
+      if (!r.ok) throw errore(r.status >= 500 ? 'rete' : 'dropbox', 'Download non riuscito (' + r.status + ')');
+      return r.arrayBuffer();
+    });
+  }
+
   function elencoCartelle(path) {
     return token().then(function (tk) {
       return chiamaApi('https://api.dropboxapi.com/2/files/list_folder', { path: path, recursive: false, limit: 2000 }, tk);
@@ -286,7 +310,7 @@
   root.DFStore = { openDB: openDB, store: store, kvGet: kvGet, kvSet: kvSet, STORES: STORES };
   root.DFDropbox = {
     cfg: cfg, setCfg: setCfg, collegato: collegato, token: token, scambiaCodice: scambiaCodice,
-    elencoCartelle: elencoCartelle, svuotaCoda: svuotaCoda, aggiornaInvio: aggiornaInvio, annuncia: annuncia,
+    elencoCartelle: elencoCartelle, metadati: metadati, scarica: scarica, svuotaCoda: svuotaCoda, aggiornaInvio: aggiornaInvio, annuncia: annuncia,
     canale: function () { return canale; }
   };
 })(typeof self !== 'undefined' ? self : this);

@@ -459,3 +459,22 @@ body.bloccato { overflow: hidden; }
 .avviso-misure { display: flex; gap: 8px; align-items: flex-start; margin: 8px 0 0; padding: 10px 12px; border-radius: var(--r-campo);
   background: var(--ambra-velo); color: #6b4105; font-size: var(--fs-13); line-height: 1.4; }
 .avviso-misure .ico { flex: none; margin-top: 1px; color: var(--ambra); }
+
+/* ── 3.2: icone WhatsApp/Telegram, coordinate, numero civico ──────────── */
+.ico-marchio { width: 20px; height: 20px; flex: none; display: block; }
+.ico-wa { color: #25d366; }
+.ico-tg { color: #2aabee; }
+#nota_via, #nota_viaCantiere { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+#nota_via:empty, #nota_viaCantiere:empty { display: none; }
+.coord { display: inline-flex; align-items: center; gap: 4px; color: var(--color-text); font-weight: 600; }
+.coord .ico { color: var(--color-accent-ink); }
+.campo-nota a, .link-btn { font-weight: 600; font-size: var(--fs-12); }
+.link-btn { border: 0; background: none; padding: 0; color: var(--color-accent-ink); cursor: pointer; font-family: inherit; }
+.link-btn:hover { text-decoration: underline; text-underline-offset: 3px; }
+.coord-fonte { flex-basis: 100%; color: var(--color-text-muted); }
+.mi-testo { display: grid; gap: 6px; flex: 1; min-width: 0; }
+.mi-civico { display: flex; align-items: center; gap: 8px; font-size: var(--fs-13); font-weight: 600; }
+.mi-civico input { width: 110px; min-height: 38px; padding: 6px 10px; font: inherit; font-size: 16px; border: 0; border-radius: var(--r-campo);
+  box-shadow: inset 0 0 0 1px var(--color-divider-forte); background: #fff; }
+.mi-civico input:focus { outline: none; box-shadow: inset 0 0 0 2px var(--color-accent); }
+.mi-nota { font-size: var(--fs-12); color: var(--color-text-muted); }

@@ -15,7 +15,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="app.css?v=3.1.0">
+<link rel="stylesheet" href="app.css?v=3.2.0">
 </head>
 <body>
 <!-- icone: tratto 1.6 come le icone del sito -->
@@ -45,6 +45,8 @@
   <symbol id="i-scarica" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></symbol>
   <symbol id="i-condividi" viewBox="0 0 24 24"><path d="M12 15V4M8 8l4-4 4 4M6 12H5v8h14v-8h-1"/></symbol>
   <symbol id="i-cartella" viewBox="0 0 24 24"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2h8.5A1.5 1.5 0 0 1 21 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z"/></symbol>
+  <symbol id="i-whatsapp" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M12 2.2a9.8 9.8 0 0 0-8.4 14.8L2.3 21.7l4.8-1.3A9.8 9.8 0 1 0 12 2.2zm0 1.8a8 8 0 1 1-4.1 14.9l-.3-.2-2.8.8.8-2.7-.2-.3A8 8 0 0 1 12 4zm-3.2 3.7c-.2 0-.5 0-.8.4-.3.3-1 1-1 2.4s1 2.8 1.2 3c.1.2 2 3.1 4.9 4.3 2.4 1 2.9.8 3.4.7.5-.1 1.7-.7 1.9-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3l-2-1c-.3-.1-.5-.2-.7.1-.2.3-.8 1-.9 1.2-.2.2-.3.2-.6.1-.3-.1-1.3-.5-2.4-1.5-.9-.8-1.5-1.8-1.7-2.1-.2-.3 0-.5.1-.6l.5-.6.3-.5c.1-.2 0-.4 0-.5l-.9-2.3c-.2-.6-.5-.5-.7-.5h-.5z"/></symbol>
+  <symbol id="i-telegram" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="currentColor" stroke="none"/><path fill="#fff" stroke="none" d="M16.9 7.4 5.8 11.7c-.8.3-.7.8-.1 1l2.8.9 1.1 3.4c.1.4.3.5.6.5s.4-.1.6-.3l1.5-1.4 2.9 2.1c.5.3.9.1 1.1-.5l1.9-9c.2-.8-.3-1.2-1-.9zm-1.7 2.2-5.4 4.9-.2 2.3-1-3.1 6.2-4.3c.3-.2.6 0 .4.2z"/></symbol>
   <symbol id="i-carica" viewBox="0 0 24 24"><path d="M12 15V4M7 9l5-5 5 5M5 20h14"/></symbol>
 </svg>
 
@@ -115,9 +117,9 @@
         <input id="c_email" data-h="email" type="email" inputmode="email" autocomplete="off" autocapitalize="off" placeholder="email@cliente.it">
       </div>
     </div>
-    <div class="scelte" style="margin-top:10px" aria-label="Il numero ha">
-      <label class="chip"><input type="checkbox" id="c_wa" data-hchk="wa"><span class="spunta"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span>Ha WhatsApp</label>
-      <label class="chip"><input type="checkbox" id="c_tg" data-hchk="tg"><span class="spunta"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span>Ha Telegram</label>
+    <div class="scelte" style="margin-top:10px" role="group" aria-label="Su questo numero il cliente ha">
+      <label class="chip"><input type="checkbox" id="c_wa" data-hchk="wa"><span class="spunta"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span><svg class="ico-marchio ico-wa" aria-hidden="true"><use href="#i-whatsapp"/></svg>WhatsApp</label>
+      <label class="chip"><input type="checkbox" id="c_tg" data-hchk="tg"><span class="spunta"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span><svg class="ico-marchio ico-tg" aria-hidden="true"><use href="#i-telegram"/></svg>Telegram</label>
     </div>
 
     <h2 class="sez-titolo">Dove</h2>
@@ -254,7 +256,10 @@
     <strong>Scegli il punto sulla mappa</strong>
     <button class="btn btn-secondary btn-piccolo" type="button" id="mappaGps"><svg class="ico ico-s"><use href="#i-gps"/></svg>Usa GPS</button>
   </div>
-  <div class="mappa-indirizzo"><svg class="ico ico-s"><use href="#i-pin"/></svg><span id="mappaIndirizzo">Trascina il punto o tocca la mappa</span></div>
+  <div class="mappa-indirizzo"><svg class="ico ico-s"><use href="#i-pin"/></svg>
+    <div class="mi-testo"><span id="mappaIndirizzo">Trascina il punto o tocca la mappa</span>
+      <label class="mi-civico" for="mappaCivico">N° civico <input id="mappaCivico" autocomplete="off" autocapitalize="characters" placeholder="es. 12/A"></label>
+      <span class="mi-nota">Metti il punto sul portone: le coordinate servono agli operai per arrivare.</span></div></div>
   <div id="mapContainer"></div>
   <div class="mappa-piede">
     <button class="btn btn-secondary" type="button" id="mappaChiudi">Annulla</button>
@@ -262,7 +267,7 @@
   </div>
 </div>
 
-<script src="dbx.js?v=3.1.0"></script>
-<script src="app.js?v=3.1.0"></script>
+<script src="dbx.js?v=3.2.0"></script>
+<script src="app.js?v=3.2.0"></script>
 </body>
 </html>
