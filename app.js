@@ -105,20 +105,20 @@ function disegnaModello(ctx, key, w, h) {
 
 /* ── Categorie della tipologia (invariate) ───────────────────────────── */
 function categoria(tipo) {
-  var t = (tipo || '').trim().toLowerCase();
+  // minuscole, spazi doppi tolti; ogni parola cerca anche il plurale (finestra/finestre, cancello/cancelli…)
+  var t = (tipo || '').toLowerCase().replace(/\s+/g, ' ').trim();
   if (!t) return 'seleziona';
-  if (t.indexOf('riparaz') >= 0 || t === 'altro' || t.indexOf('carter') >= 0 || t.indexOf('grondaia') >= 0 || t.indexOf('lattoneria') >= 0 ||
-    t === 'controtelaio' || t.indexOf('elementi particolari') >= 0 || t.indexOf('serratura') >= 0 || t.indexOf('assistenza') >= 0 || t.indexOf('modifica') >= 0) return 'varie';
-  if (t === 'cassonetto') return 'cassonetto_solo';
-  if (t.indexOf('mobili in alluminio') >= 0 || t.indexOf('mobile') >= 0 || t.indexOf('copricaldaia') >= 0) return 'mobili_alluminio';
-  if (t.indexOf('sportello') >= 0) return 'sportello_alluminio';
-  if (t.indexOf('veranda') >= 0) return 'veranda';
-  if (t.indexOf('blindat') >= 0) return 'porta_blindata';
-  if (t.indexOf('portone') >= 0) return 'portone_palazzo';
-  if (t.indexOf('porta in ferro') >= 0 || (t.indexOf('porta') >= 0 && t.indexOf('ferro') >= 0)) return 'porta_ferro';
-  if (t.indexOf('zanzarier') >= 0 || t.indexOf('tapparell') >= 0 || t.indexOf('serranda') >= 0 || t.indexOf('tenda') >= 0 || t.indexOf('persian') >= 0) return 'accessori';
-  if (t.indexOf('cancello') >= 0 || t.indexOf('grata') >= 0 || t.indexOf('inferriat') >= 0 || t.indexOf('griglia') >= 0 || t.indexOf('ringhier') >= 0 ||
-    t.indexOf('parapett') >= 0 || t.indexOf('copertura') >= 0 || t.indexOf('tettoia') >= 0) return 'ferro_esterno';
+  var ha = function (re) { return re.test(t); };
+  if (ha(/riparaz|^altr[oi]$|carter|grondai|lattoneri|^controtela|elementi particolari|serratur|cilindr|assistenz|modific|sopralluog/)) return 'varie';
+  if (ha(/^cassonett[oi]$/)) return 'cassonetto_solo';
+  if (ha(/mobil[ei]|copricaldai|scarpier|armadi/)) return 'mobili_alluminio';
+  if (ha(/sportell/)) return 'sportello_alluminio';
+  if (ha(/verand/)) return 'veranda';
+  if (ha(/blindat/)) return 'porta_blindata';
+  if (ha(/porton/)) return 'portone_palazzo';
+  if (ha(/port[ae]/) && ha(/ferr/)) return 'porta_ferro';
+  if (ha(/zanzarier|tapparell|serrand|tend[ae]|persian|venezian/)) return 'accessori';
+  if (ha(/cancell|grat[ae]\b|inferriat|grigli|ringhier|parapett|copertur|tettoi|pensilin/)) return 'ferro_esterno';
   return 'serramento';
 }
 function haCassonetto(it) { var c = categoria(it.tipologia); return c === 'cassonetto_solo' || ((c === 'serramento' || c === 'veranda') && it.cassonetto === 'si'); }
@@ -159,8 +159,8 @@ function posizioneVuota() {
     ferramentaDiversa: false, coloreFerrInt: '', coloreFerrEst: '',
     pannelloEst: false, pannelloEstColore: '', pannelloEstSpessore: '', pannelloInt: false, pannelloIntColore: '', pannelloIntSpessore: '',
     spioncino: '', tipoFissaggio: '', chiusuraSuppl: false, doppiaSerratura: false, chiudiportaAereo: false,
-    manigliaInt: '', manigliaEst: '', numChiavi: '', decorazioneVetriIndirizzo: false, pulsantieraCitofono: false, serraturaChiave: false,
-    cas: { L: '', L_spigoli: '', L_infisso: '', H: '', P: '', P_dx: '', P_sx: '', tipo: '', manovra: '', note: '', foto: [], disegno: null },
+    manigliaInt: '', manigliaEst: '', numChiavi: '', decorazioneVetriIndirizzo: false, decorazioneTesto: '', pulsantieraCitofono: false, serraturaChiave: false,
+    cas: { L: '', L_spigoli: '', L_infisso: '', H: '', P: '', P_dx: '', P_sx: '', PZ: '', tipo: '', manovra: '', note: '', foto: [], disegno: null },
     foto: [], disegno: null };
 }
 /* porta i dati salvati dalle versioni precedenti alla forma attuale */
@@ -408,9 +408,9 @@ function campoTesto(it, i, f, label, req, ph, cls) {
   return '<div class="campo' + (cls ? ' ' + cls : '') + '"><label for="' + idc(i, f) + '">' + label + reqMark(req) + '</label>' +
     '<input id="' + idc(i, f) + '" data-f="' + f + '" data-i="' + i + '" value="' + esc(it[f]) + '"' + (ph ? ' placeholder="' + esc(ph) + '"' : '') + ' autocomplete="off"></div>';
 }
-function campoLista(it, i, f, label, chiave, req, ph) {
+function campoLista(it, i, f, label, chiave, req, ph, attr) {
   var k = chiave === 'dl' ? f : chiave;
-  return '<div class="campo"><label for="' + idc(i, f) + '">' + label + reqMark(req) + '</label><div class="combo">' +
+  return '<div class="campo"' + (attr || '') + '><label for="' + idc(i, f) + '">' + label + reqMark(req) + '</label><div class="combo">' +
     '<input id="' + idc(i, f) + '" data-f="' + f + '" data-i="' + i + '" data-dd="' + k + '" value="' + esc(it[f]) + '"' + (ph ? ' placeholder="' + esc(ph) + '"' : '') +
     ' autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list">' +
     '<button type="button" class="combo-freccia" tabindex="-1" aria-label="Mostra tutte le voci">' + ic('giu', 'ico-s') + '</button>' +
@@ -474,7 +474,7 @@ function campiPosizione(it, i) {
       '<div class="scelte" style="margin-top:12px">' + chip(it, i, 'coprifili', 'Carter / coprifili') + '</div>';
   } else if (cat === 'veranda') {
     h += dett + '<div class="campi">' + campoLista(it, i, 'serie', 'Serie / materiale', 'dl', rF) + campoLista(it, i, 'colore', 'Colore', 'dl', rF) +
-      campoLista(it, i, 'vetri', 'Vetri / pannelli', 'dl', rF) + campoLista(it, i, 'telaio', 'Telaio', 'dl', rF) + campoLista(it, i, 'apertura', 'Apertura', 'dl', rF) + hman(rq) +
+      campoLista(it, i, 'vetri', 'Vetri / pannelli', 'dl', rF) + campoLista(it, i, 'telaio', 'Telaio', 'dl', rF) + campoLista(it, i, 'apertura', 'Apertura', 'dl', rF) + hman(0) +
       campoNum(it, i, 'hRinghiera', 'H ringhiera (se serve)', 0, false, 'mm') + campoTesto(it, i, 'anteNoSim', 'Ante simmetriche / misure ante', 0, 'Sì, oppure le misure') +
       campoSel(it, i, 'sopralluceTipo', 'Sopralluce', [['nessuno', 'Nessuno'], ['fisso', 'Fisso'], ['apribile', 'Apribile']], 0) +
       campoNum(it, i, 'sopralluceH', 'Altezza sopralluce mm', 0) + campoNum(it, i, 'sottoluceH', 'Altezza sottoluce mm', 0) +
@@ -488,7 +488,7 @@ function campiPosizione(it, i) {
   } else if (cat === 'porta_blindata' || cat === 'porta_ferro') {
     var bl = cat === 'porta_blindata';
     h += dett + '<div class="campi">' + campoLista(it, i, 'modelloPorta', 'Modello', 'modelloPorta', rF) + campoLista(it, i, 'colore', bl ? 'Colore porta' : 'Colore', 'dl', rF) +
-      campoLista(it, i, 'vetri', 'Vetri / pannelli / lamiere', 'dl', 0) + campoLista(it, i, 'telaio', 'Telaio', 'dl', 0) +
+      campoLista(it, i, 'vetri', 'Vetri / pannelli / lamiere', 'dl', 0, '', bl ? ' data-vetri-bl' + (vetriBlindata(it) ? '' : ' hidden') : '') + campoLista(it, i, 'telaio', 'Telaio', 'dl', 0) +
       campoLista(it, i, 'apertura', 'Senso di apertura', 'dl', rF) + hman(0, 'mm da terra') +
       campoLista(it, i, 'modelloSerratura', 'Modello serratura', 'modelloSerratura', rF) + campoLista(it, i, 'tipoDefender', 'Tipo defender', 'tipoDefender', 0) +
       campoLista(it, i, 'coloreFerramenta', 'Colore ferramenta', 'colore', 0) + campoLista(it, i, 'spioncino', 'Spioncino', 'spioncino', 0) +
@@ -509,6 +509,8 @@ function campiPosizione(it, i) {
       campoLista(it, i, 'spioncino', 'Spioncino', 'spioncino', 0) + campoLista(it, i, 'tipoFissaggio', 'Tipo di fissaggio', 'tipoFissaggio', 0) + '</div>' +
       '<div class="scelte" style="margin-top:12px">' + chip(it, i, 'ferramentaDiversa', 'Ferramenta int/est diversa') + chip(it, i, 'chiudiportaAereo', 'Chiudiporta aereo') +
       chip(it, i, 'decorazioneVetriIndirizzo', 'Decorazioni vetri con indirizzo') + chip(it, i, 'pulsantieraCitofono', 'Pulsantiera citofonica') + chip(it, i, 'coprifili', 'Carter / coprifili') + '</div>';
+    if (it.decorazioneVetriIndirizzo) h += '<div class="blocco"><p class="blocco-titolo">Decorazioni sui vetri</p><div class="campi g1">' +
+      campoTesto(it, i, 'decorazioneTesto', 'Testo / numero civico da riportare', 0, 'Es. Via Roma 12 — numeri 10 e 12') + '</div></div>';
     if (it.ferramentaDiversa) h += bloccoFerramenta(it, i);
   } else if (cat === 'sportello_alluminio') {
     h += dett + '<div class="campi">' + campoLista(it, i, 'serie', 'Serie / materiale', 'dl', rF) + campoLista(it, i, 'colore', 'Colore', 'dl', rF) +
@@ -534,6 +536,8 @@ function campiPosizione(it, i) {
     '<button type="button" class="media media-vuoto" data-act="addfoto" data-i="' + i + '">' + ic('camera') + 'Foto</button></div>';
   return h;
 }
+/* blindata cieca (1 o 2 ante senza sopralluce né laterali): niente vetri */
+function vetriBlindata(it) { var m = (it.modelloPorta || '').toLowerCase(); return !m.trim() || /sopralluce|laterale|vetr/.test(m); }
 function bloccoFerramenta(it, i) {
   return '<div class="blocco"><p class="blocco-titolo">Colore ferramenta</p><div class="campi">' + campoLista(it, i, 'coloreFerrInt', 'Interna', 'colore', 1) + campoLista(it, i, 'coloreFerrEst', 'Esterna', 'colore', 1) + '</div></div>';
 }
@@ -541,7 +545,7 @@ function bloccoCassonetto(it, i, rF) {
   var r = rF ? 1 : 0;
   return '<div class="blocco"><p class="blocco-titolo">Dettaglio cassonetto</p>' +
     '<div class="campi g3 misure">' + campoNum(it, i, 'L_spigoli', 'L spigoli', r, true) + campoNum(it, i, 'L_infisso', 'L infisso', r, true) + campoNum(it, i, 'H', 'H', r, true) + '</div>' +
-    '<div class="campi misure" style="margin-top:12px">' + campoNum(it, i, 'P_dx', 'Prof. DX', r, true) + campoNum(it, i, 'P_sx', 'Prof. SX', 0, true, '= DX') + '</div>' +
+    '<div class="campi g3 misure" style="margin-top:12px">' + campoNum(it, i, 'P_dx', 'Prof. DX', r, true) + campoNum(it, i, 'P_sx', 'Prof. SX', 0, true, '= DX') + campoNum(it, i, 'PZ', 'Pezzi', r, true) + '</div>' +
     '<div class="campi" style="margin-top:12px">' + campoSel(it, i, 'tipo', 'Tipo cassonetto', [''].concat(OPZIONI.casTipo), r, true) +
     campoSel(it, i, 'manovra', 'Manovra', [''].concat(OPZIONI.casManovra), 0, true) +
     '<div class="campo campo-largo"><label for="' + idc(i, 'note', true) + '">Note cassonetto</label><input id="' + idc(i, 'note', true) + '" data-cf="note" data-i="' + i + '" value="' + esc(it.cas.note) + '" autocomplete="off"></div></div>' +
@@ -629,6 +633,7 @@ document.addEventListener('input', function (e) {
   var t = e.target;
   if (t.dataset.h !== undefined) {
     var k = t.dataset.h;
+    if (k === 'tel' && /[\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/.test(t.value)) t.value = t.value.replace(/[\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/g, '');
     S[k] = t.value; t.removeAttribute('aria-invalid');
     if (k === 'cliente' || k === 'data') aggiornaTitolo();
     if (k === 'rilevatore') { imp.rilevatore = t.value; kvSet('impostazioni', imp); }
@@ -639,6 +644,7 @@ document.addEventListener('input', function (e) {
     var prima = categoria(it.tipologia);
     it[t.dataset.f] = t.value; t.removeAttribute('aria-invalid');
     if (t.dataset.f === 'PZ') aggiornaConteggi();
+    if (t.dataset.f === 'modelloPorta') { var vb = $('[data-sub="' + i + '"] [data-vetri-bl]'); if (vb) vb.hidden = !vetriBlindata(it); }
     if (t.dataset.f === 'tipologia' && categoria(t.value) !== prima) ridisegnaCampi(i);
     aggiornaTestaPos(i);
     salvaPresto();
@@ -664,7 +670,9 @@ document.addEventListener('change', function (e) {
   } else if (t.dataset.fchk !== undefined) {
     var i = +t.dataset.i; S.items[i][t.dataset.fchk] = t.checked; salvaPresto(); ridisegnaCampi(i);
   } else if (t.tagName === 'SELECT' && t.dataset.f !== undefined) {
-    var k = +t.dataset.i; S.items[k][t.dataset.f] = t.value; salvaPresto(); ridisegnaCampi(k);
+    var k = +t.dataset.i; S.items[k][t.dataset.f] = t.value;
+    if (t.dataset.f === 'cassonetto' && t.value === 'si' && !S.items[k].cas.PZ) S.items[k].cas.PZ = S.items[k].PZ || '';
+    salvaPresto(); ridisegnaCampi(k);
   } else if (t.tagName === 'SELECT' && t.dataset.cf !== undefined) {
     S.items[+t.dataset.i].cas[t.dataset.cf] = t.value; t.removeAttribute('aria-invalid'); salvaPresto();
   }
@@ -1151,7 +1159,8 @@ function controllaCampi() {
     var cat = categoria(it.tipologia), opz = cat === 'varie' || !!it.soloRiparazione;
     var req = ['pos', 'tipologia', 'PZ'];
     if (!opz) {
-      if (cat === 'serramento' || cat === 'veranda') req = req.concat(['L', 'H', 'serie', 'colore', 'vetri', 'telaio', 'apertura', 'hmaniglia']);
+      if (cat === 'serramento') req = req.concat(['L', 'H', 'serie', 'colore', 'vetri', 'telaio', 'apertura', 'hmaniglia']);
+      else if (cat === 'veranda') req = req.concat(['L', 'H', 'serie', 'colore', 'vetri', 'telaio', 'apertura']);
       else if (cat === 'mobili_alluminio') req = req.concat(['L', 'H', 'P', 'serie', 'colore', 'vetri', 'apertura', 'hmaniglia']);
       else if (cat === 'porta_blindata' || cat === 'porta_ferro') {
         req = req.concat(['L', 'H', 'modelloPorta', 'colore', 'apertura', 'modelloSerratura']);
@@ -1168,9 +1177,9 @@ function controllaCampi() {
     if (it.misuraLuce) req.push('L_luce', 'H_luce');
     req.forEach(function (f) { if (!String(it[f] || '').trim()) segna($('[data-f="' + f + '"][data-i="' + i + '"]'), P, ETICHETTE[f] || f); });
     if (!opz && haCassonetto(it)) {
-      ['L_spigoli', 'L_infisso', 'H', 'P_dx', 'tipo'].forEach(function (f) {
+      ['L_spigoli', 'L_infisso', 'H', 'P_dx', 'tipo'].concat(categoria(it.tipologia) === 'cassonetto_solo' ? [] : ['PZ']).forEach(function (f) {
         var v = f === 'L_spigoli' ? (it.cas.L_spigoli || it.cas.L) : f === 'P_dx' ? (it.cas.P_dx || it.cas.P) : it.cas[f];
-        if (!String(v || '').trim()) segna($('[data-cf="' + f + '"][data-i="' + i + '"]'), P, f === 'H' ? 'Cassonetto: altezza H' : (ETICHETTE[f] || f));
+        if (!String(v || '').trim()) segna($('[data-cf="' + f + '"][data-i="' + i + '"]'), P, f === 'H' ? 'Cassonetto: altezza H' : f === 'PZ' ? 'Cassonetto: pezzi' : (ETICHETTE[f] || f));
       });
     }
     if (!mediaSrc(it.disegno)) avvisi.push({ el: $('[data-act="edit-disegno"][data-i="' + i + '"]'), pos: P, testo: 'Manca il disegno' });
@@ -1225,7 +1234,7 @@ function specifiche(it) {
   if (it.pannelloInt) add('Pannello int.', (it.pannelloIntColore || '') + (it.pannelloIntSpessore ? ' (' + it.pannelloIntSpessore + ' mm)' : ''));
   add('Spioncino', it.spioncino); add('Fissaggio', it.tipoFissaggio); add('Maniglia int.', it.manigliaInt); add('Maniglia est.', it.manigliaEst); add('Copie chiavi', it.numChiavi);
   if (it.chiusuraSuppl) add('Chiusura suppl.', 'Sì'); if (it.doppiaSerratura) add('Doppia serratura', 'Sì'); if (it.chiudiportaAereo) add('Chiudiporta aereo', 'Sì');
-  if (it.decorazioneVetriIndirizzo) add('Decoraz. vetro', 'Con indirizzo'); if (it.pulsantieraCitofono) add('Pulsantiera citof.', 'Sì');
+  if (it.decorazioneVetriIndirizzo) add('Decoraz. vetro', it.decorazioneTesto || 'Con indirizzo'); if (it.pulsantieraCitofono) add('Pulsantiera citof.', 'Sì');
   if (it.coprifili) add('Carter/coprifili', 'Sì');
   if (cat === 'serramento' || cat === 'veranda') add('Cassonetto', it.cassonetto === 'si' ? 'Sì' : 'No');
   return sp;
@@ -1233,7 +1242,8 @@ function specifiche(it) {
 function rigaCassonetto(it) {
   var c = it.cas || {}, pdx = c.P_dx || c.P || '-';
   return 'Cassonetto ' + (c.tipo || '') + ': L spigoli ' + (c.L_spigoli || c.L || '-') + (c.L_infisso ? ' (L infisso ' + c.L_infisso + ')' : '') +
-    ' × H ' + (c.H || '-') + ' × P DX ' + pdx + (c.P_sx && c.P_sx !== pdx ? ' / SX ' + c.P_sx : '') + ' mm' + (c.manovra ? ' - Manovra: ' + c.manovra : '') + (c.note ? ' - ' + c.note : '');
+    ' × H ' + (c.H || '-') + ' × P DX ' + pdx + (c.P_sx && c.P_sx !== pdx ? ' / SX ' + c.P_sx : '') + ' mm' + (c.PZ && categoria(it.tipologia) !== 'cassonetto_solo' ? ' - PZ ' + c.PZ : '') +
+    (c.manovra ? ' - Manovra: ' + c.manovra : '') + (c.note ? ' - ' + c.note : '');
 }
 function misureTesta(it) {
   var c = categoria(it.tipologia);

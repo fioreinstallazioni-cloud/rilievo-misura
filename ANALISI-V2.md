@@ -62,3 +62,33 @@ simulato da telefono (390×844).*
 - **Grafica del sito**: barra scura in vetro, tessere chiare, bottoni squadrati 4 px, Inter + Chakra
   Petch per le misure, icone a tratto come sul sito.
 - Il file `dati_….json` resta compatibile con la v2 (stesso nome, stessi campi, `img` sempre pieno).
+
+## Confronto con il lavoro fatto con Antigravity e con i rilievi veri (31/10/2026)
+
+Riletta la conversazione con Antigravity (richieste su rubrica, email, WhatsApp/Telegram, indirizzi,
+mappa, citofono, tipo cliente, cantiere, intervista sulle tipologie 1–8, audit finale) e passati nella v3
+i **19 rilievi veri** salvati in Dropbox (`dati_….json`, 39 posizioni, da giugno a ottobre 2026).
+
+- **Tutte le richieste dell'intervista sono nella v3** (infissi, mobili, veranda, cassonetto, blindata,
+  porta in ferro, portone di palazzo, sportello). L'intervista si era fermata allo sportello (n. 8):
+  le tipologie dalla 9 in poi usano ancora i gruppi generici.
+- **Nell'audit di Antigravity il menu a tendina risultava «sistemato», ma nel codice pubblicato non
+  funzionava** (vedi punto 3 sopra): verificato su GitHub, commit f207e3c.
+- Aggiunto in questo giro:
+  - tipologie riconosciute anche al **plurale** e con spazi in più (*Cancelli*, *Porte in ferro*,
+    *Cassonetti*, *Serrande*, *Tende*…) e con nuove parole (*cilindro*, *sopralluogo*, *veneziana*,
+    *scarpiera*, *pensilina*); prima *«Cancelli»* finiva fra i serramenti e chiedeva vetri e maniglia;
+  - **veranda: H maniglia non più obbligatoria** (nei rilievi veri veniva riempita con «0»; nell'intervista
+    non era fra le obbligatorie);
+  - **cassonetto dentro infisso/veranda: «Pezzi» obbligatorio** (chiesto nell'intervista, mancava),
+    precompilato con i pezzi dell'infisso;
+  - **porta blindata: «Vetri» nascosto se il modello è cieco** (1 o 2 ante senza sopralluce né laterali);
+  - **portone: con la spunta «Decorazioni vetri con indirizzo» compare il campo per il testo** da riportare;
+  - **telefono incollato dalla rubrica dell'iPhone**: tolti i caratteri invisibili già nel campo.
+- Tutti i 19 rilievi veri si aprono nella v3 e producono il PDF senza errori (il più pesante, 9 MB di foto,
+  in meno di un secondo). Quelli vecchi segnalano come mancanti solo i campi diventati obbligatori
+  dopo l'intervista (L infisso e pezzi del cassonetto, modello e maniglie del portone).
+- Da decidere: nell'audit di Antigravity la **veranda** ha «L spigoli / L infisso» e profondità DX/SX,
+  e il **cassonetto** ha manovra e colore obbligatori; nei messaggi dell'intervista queste regole erano
+  chieste per i cassonetti, non per la veranda. Nella v3 la veranda resta L × H × P e la manovra del
+  cassonetto è facoltativa.
