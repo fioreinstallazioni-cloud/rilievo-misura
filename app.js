@@ -9,7 +9,7 @@
 (function () {
 'use strict';
 
-var VERSIONE_APP = '3.0.0';
+var VERSIONE_APP = '3.1.0';
 var BASE_PREDEFINITA = '/Ufficio/COMMESSE/Commesse Installazioni 2026';
 var COMMESSE_PREDEFINITE = [
   'C47-SIRYUS SRL', 'C46-Mes group', 'C45-Tonino Russo', 'C44-Teatro Bracco', 'C35-Tecno3-Telai',
@@ -48,6 +48,18 @@ var OPZIONI = {
   pos: ['Cucina', 'Soggiorno', 'Salone', 'Camera 1', 'Camera 2', 'Camera 3', 'Stanzetta', 'Bagno', 'Bagno 2', 'Ingresso', 'Porta principale',
     'Portone principale', 'Studio', 'Ripostiglio', 'Garage', 'Cantina', 'Mansarda', 'Balcone', 'Terrazzo', 'Scala']
 };
+
+OPZIONI.piano = ['Seminterrato', 'Piano terra', 'Rialzato'].concat(Array.from({ length: 20 }, function (_, k) { return (k + 1) + '° piano'; })).concat(['Mansarda', 'Attico', 'Altro']);
+OPZIONI.mezzoSalita = ['Scala interna', 'Scala esterna', 'Scala aerea', 'Scala a mano', 'Ascensore', 'Gru', 'Elevatore', 'Ponteggio', 'Nessuno'];
+
+/* «Che misura hai preso?»: senza questa informazione in officina non sanno se togliere o no */
+var TIPI_MISURA = [['esterne', 'Esterne', 'fuori telaio'], ['luce', 'Luce muro', 'interne'], ['finita', 'Finita', 'del prodotto'], ['altro', 'Altro', 'la scrivi tu']];
+var TESTO_MISURA = { esterne: 'Esterne (fuori telaio)', luce: 'Interne (luce muro)', finita: 'Finita (misura del prodotto)' };
+var PRESE_L = ['L_alto', 'L_centro', 'L_basso'], PRESE_H = ['H_sx', 'H_centro', 'H_dx'], PRESE = PRESE_L.concat(PRESE_H, ['D1', 'D2']);
+var SOGLIA_MM = 5;   // oltre questa differenza fra le prese l'app avvisa (muro storto o fuori squadro)
+var LATI = [['sopra', 'Sopra'], ['sx', 'Sinistra'], ['dx', 'Destra'], ['sotto', 'Sotto']];
+var PROFILI_LATO = [['', '—'], ['Z', 'Z'], ['L', 'L'], ['T', 'T'], ['nessuno', 'Nessuno / a muro']];
+var CON_TELAIO = ['serramento', 'veranda', 'porta_blindata', 'porta_ferro', 'portone_palazzo', 'sportello_alluminio'];
 
 /* ── Disegni standard ────────────────────────────────────────────────── */
 var TEMPLATES = {
@@ -147,12 +159,16 @@ function mediaSrc(m) { return m ? (m.img || m.bg || null) : null; }
 function nuoviDati(rilevatore) {
   return { cliente: '', tel: '', email: '', wa: false, tg: false, via: '', citofono: '', tipoCliente: 'privato', referente: '',
     cantiereDiverso: false, viaCantiere: '', lat: null, lng: null, latCantiere: null, lngCantiere: null,
+    piano: '', mezzoSalita: '', difficolta: '', notePosa: '',
     data: oggiISO(), rilevatore: rilevatore || '', destType: 'lead', destCommessa: '', items: [] };
 }
 function posizioneVuota() {
   return { pos: '', tipologia: '', serie: '', colore: '', vetri: '', telaio: '', apertura: '',
     hmaniglia: '', L: '', H: '', P: '', PZ: '1', nota: '', cassonetto: 'no', _confirm: true, soloRiparazione: false,
     misuraLuce: false, L_luce: '', H_luce: '', controtelaio: false, coprifili: false,
+    tipoMisura: '', tipoMisuraAltro: '',
+    trePrese: false, L_alto: '', L_centro: '', L_basso: '', H_sx: '', H_centro: '', H_dx: '', D1: '', D2: '',
+    telaioLati: false, tl_sopra: '', tl_sx: '', tl_dx: '', tl_sotto: '', rf_sopra: '', rf_sx: '', rf_dx: '', rf_sotto: '',
     tipoManiglia: '', mensole: '', fondo: 'no', tetto: 'no', anteNoSim: '', hRinghiera: '',
     anteSimmetriche: 'si', sopralluceTipo: 'nessuno', sopralluceH: '', sottoluceH: '',
     modelloPorta: '', modelloSerratura: '', tipoDefender: '', coloreFerramenta: '',
@@ -377,7 +393,7 @@ function disegnaTestata() {
   $$('[data-h]').forEach(function (el) { var v = S[el.dataset.h]; el.value = v == null ? '' : v; el.removeAttribute('aria-invalid'); });
   if (!S.data) { S.data = oggiISO(); $('#c_data').value = S.data; }
   $$('[data-hchk]').forEach(function (el) { el.checked = !!S[el.dataset.hchk]; });
-  aggiornaTipoCliente(); aggiornaTitolo(); aggiornaCantiere(); aggiornaNoteIndirizzo();
+  aggiornaTipoCliente(); aggiornaTitolo(); aggiornaCantiere(); aggiornaNoteIndirizzo(); aggiornaDifficolta();
 }
 function aggiornaTitolo() {
   $('#titoloCliente').textContent = S.cliente.trim() || 'Nuovo rilievo';
@@ -390,6 +406,10 @@ function aggiornaTipoCliente() {
   else if (S.tipoCliente === 'rivenditore') { w.hidden = false; l.textContent = 'Cliente finale del rivenditore'; inp.placeholder = 'Es. nome del cliente finale'; }
   else w.hidden = true;
 }
+function aggiornaDifficolta() { $$('[data-diff]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.diff === S.difficolta)); }); }
+$$('[data-diff]').forEach(function (b) {
+  b.onclick = function () { S.difficolta = S.difficolta === b.dataset.diff ? '' : b.dataset.diff; aggiornaDifficolta(); salvaPresto(); };
+});
 function aggiornaCantiere() { $('#cantiereWrap').hidden = !S.cantiereDiverso; }
 function linkMappa(lat, lng) { return 'https://www.google.com/maps/search/?api=1&query=' + lat + ',' + lng; }
 function aggiornaNoteIndirizzo() {
@@ -416,11 +436,58 @@ function campoLista(it, i, f, label, chiave, req, ph, attr) {
     '<button type="button" class="combo-freccia" tabindex="-1" aria-label="Mostra tutte le voci">' + ic('giu', 'ico-s') + '</button>' +
     '<div class="combo-menu" role="listbox" hidden></div></div></div>';
 }
-function campoNum(it, i, f, label, req, cf, ph) {
+function campoNum(it, i, f, label, req, cf, ph, extra) {
   var v = cf ? it.cas[f] : it[f];
   return '<div class="campo"><label for="' + idc(i, f, cf) + '">' + label + reqMark(req) + '</label>' +
     '<input id="' + idc(i, f, cf) + '" ' + (cf ? 'data-cf' : 'data-f') + '="' + f + '" data-i="' + i + '" value="' + esc(v) + '" inputmode="numeric" autocomplete="off"' +
-    (ph ? ' placeholder="' + esc(ph) + '"' : '') + '></div>';
+    (ph ? ' placeholder="' + esc(ph) + '"' : '') + (extra || '') + '></div>';
+}
+/* tre prese per lato: la misura da usare è la minima; avvisi se le prese o le diagonali differiscono */
+function num(v) { var n = parseFloat(String(v == null ? '' : v).replace(',', '.')); return isNaN(n) || n <= 0 ? null : n; }
+function arrot(n) { return Math.round(n * 10) / 10; }
+function analisiPrese(it) {
+  var L = PRESE_L.map(function (f) { return num(it[f]); }).filter(function (n) { return n != null; });
+  var H = PRESE_H.map(function (f) { return num(it[f]); }).filter(function (n) { return n != null; });
+  var d1 = num(it.D1), d2 = num(it.D2);
+  var r = { Lmin: L.length ? Math.min.apply(null, L) : null, Hmin: H.length ? Math.min.apply(null, H) : null,
+    dL: L.length > 1 ? arrot(Math.max.apply(null, L) - Math.min.apply(null, L)) : 0,
+    dH: H.length > 1 ? arrot(Math.max.apply(null, H) - Math.min.apply(null, H)) : 0,
+    dD: d1 != null && d2 != null ? arrot(Math.abs(d1 - d2)) : null, avvisi: [] };
+  if (r.dL > SOGLIA_MM) r.avvisi.push('le 3 larghezze differiscono di ' + r.dL + ' mm');
+  if (r.dH > SOGLIA_MM) r.avvisi.push('le 3 altezze differiscono di ' + r.dH + ' mm');
+  if (r.dD != null && r.dD > SOGLIA_MM) r.avvisi.push('fuori squadro: le diagonali differiscono di ' + r.dD + ' mm');
+  return r;
+}
+function calcolaPrese(it) {
+  var a = analisiPrese(it);
+  it.L = a.Lmin == null ? '' : String(a.Lmin); it.H = a.Hmin == null ? '' : String(a.Hmin);
+  return a;
+}
+function esitoPrese(it) {
+  var a = analisiPrese(it), s = '';
+  if (a.Lmin != null || a.Hmin != null) s += '<p class="prese-riepilogo"><span class="tecnico">L ' + (a.Lmin != null ? a.Lmin : '–') + ' × H ' + (a.Hmin != null ? a.Hmin : '–') + ' mm</span> · è la misura minima, quella che va in L e H' +
+    (a.dD != null ? ' · diagonali: differenza <span class="tecnico">' + a.dD + ' mm</span>' : '') + '</p>';
+  if (a.avvisi.length) s += '<p class="avviso-misure">' + ic('avviso', 'ico-s') + '<span>Attenzione: ' + a.avvisi.join('; ') + '. Controlla muro e squadro prima di andare via.</span></p>';
+  return s;
+}
+function bloccoTrePrese(it, i) {
+  return '<div class="blocco"><p class="blocco-titolo">Tre prese per lato<button type="button" class="btn btn-ghost btn-piccolo" data-act="prese-uguali" data-i="' + i + '" style="margin-left:auto">Tutte uguali alla prima</button></p>' +
+    '<div class="campi g3 misure">' + campoNum(it, i, 'L_alto', 'L alto', 1) + campoNum(it, i, 'L_centro', 'L centro', 1) + campoNum(it, i, 'L_basso', 'L basso', 1) + '</div>' +
+    '<div class="campi g3 misure" style="margin-top:12px">' + campoNum(it, i, 'H_sx', 'H sinistra', 1) + campoNum(it, i, 'H_centro', 'H centro', 1) + campoNum(it, i, 'H_dx', 'H destra', 1) + '</div>' +
+    '<div class="campi misure" style="margin-top:12px">' + campoNum(it, i, 'D1', 'Diagonale 1', 'f') + campoNum(it, i, 'D2', 'Diagonale 2', 'f') + '</div>' +
+    '<div data-esito-prese="' + i + '">' + esitoPrese(it) + '</div></div>';
+}
+function bloccoTipoMisura(it, i, req) {
+  return '<div class="campi g1" style="margin-top:12px"><div class="campo"><span class="etichetta">Che misura hai preso?' + reqMark(req) + '</span>' +
+    '<div class="seg seg-misura" role="group" aria-label="Tipo di misura" data-tm-gruppo="' + i + '">' +
+    TIPI_MISURA.map(function (t) { return '<button type="button" data-tm="' + t[0] + '" data-i="' + i + '" aria-pressed="' + (it.tipoMisura === t[0]) + '">' + t[1] + '<small>' + t[2] + '</small></button>'; }).join('') + '</div>' +
+    (it.tipoMisura === 'altro' ? '<input id="' + idc(i, 'tipoMisuraAltro') + '" data-f="tipoMisuraAltro" data-i="' + i + '" value="' + esc(it.tipoMisuraAltro) + '" placeholder="Es. misure interne a parte la falda" autocomplete="off" aria-label="Che misura hai preso">' : '') +
+    '</div></div>';
+}
+function bloccoTelaioLati(it, i, r) {
+  return '<div class="blocco"><p class="blocco-titolo">Telaio lato per lato</p><div class="campi">' +
+    LATI.map(function (l) { return campoSel(it, i, 'tl_' + l[0], l[1] + ' · profilo', PROFILI_LATO, r) + campoNum(it, i, 'rf_' + l[0], l[1] + ' · rifilo mm', 0, false, 'nessuno'); }).join('') +
+    '</div><p class="campo-nota" style="margin-top:8px">Il rifilo vuoto vuol dire «nessun rifilo» su quel lato.</p></div>';
 }
 function campoSel(it, i, f, label, opzioni, req, cf) {
   var v = cf ? it.cas[f] : it[f];
@@ -449,11 +516,15 @@ function campiPosizione(it, i) {
       '<div class="campi g3 misure" style="margin-top:12px">' + campoNum(it, i, 'P_dx', 'Prof. DX', rq, true) + campoNum(it, i, 'P_sx', 'Prof. SX', 0, true, '= DX') + campoNum(it, i, 'PZ', 'Pezzi', 1) + '</div>' +
       '<p class="campo-nota" style="margin-top:6px">Misure in millimetri. Se la profondità SX è uguale alla DX lasciala vuota.</p>';
   } else {
-    h += '<div class="campi ' + (conProf ? '' : 'g3') + ' misure">' + campoNum(it, i, 'L', 'L mm', rq) + campoNum(it, i, 'H', 'H mm', rq) +
+    var calc = it.trePrese ? ' readonly tabindex="-1" class="calcolato"' : '';
+    h += '<div class="campi ' + (conProf ? '' : 'g3') + ' misure">' + campoNum(it, i, 'L', it.trePrese ? 'L mm · minima' : 'L mm', rq, false, '', calc) + campoNum(it, i, 'H', it.trePrese ? 'H mm · minima' : 'H mm', rq, false, '', calc) +
       (conProf ? campoNum(it, i, 'P', 'P mm', profObblig ? 1 : 'f') : '') + campoNum(it, i, 'PZ', 'Pezzi', 1) + '</div>';
+    h += bloccoTipoMisura(it, i, rq);
   }
 
-  h += '<div class="scelte" style="margin-top:12px">' + chip(it, i, 'misuraLuce', 'Misura luce') + (cat !== 'varie' ? chip(it, i, 'soloRiparazione', 'Solo riparazione / parziale') : '') + '</div>';
+  h += '<div class="scelte" style="margin-top:12px">' + (cat !== 'cassonetto_solo' ? chip(it, i, 'trePrese', 'Tre prese per lato') : '') + chip(it, i, 'misuraLuce', 'Misura luce') +
+    (cat !== 'varie' ? chip(it, i, 'soloRiparazione', 'Solo riparazione / parziale') : '') + '</div>';
+  if (it.trePrese && cat !== 'cassonetto_solo') h += bloccoTrePrese(it, i);
   if (it.misuraLuce) h += '<div class="blocco"><p class="blocco-titolo">Misura luce</p><div class="campi misure">' + campoNum(it, i, 'L_luce', 'L luce mm', 1) + campoNum(it, i, 'H_luce', 'H luce mm', 1) + '</div></div>';
 
   var hman = function (stella, ph) { return '<div class="campo"><label for="' + idc(i, 'hmaniglia') + '">H maniglia' + reqMark(stella) + '</label><input id="' + idc(i, 'hmaniglia') + '" data-f="hmaniglia" data-i="' + i + '" value="' + esc(it.hmaniglia) + '" placeholder="' + (ph || 'mm o cm da terra') + '" autocomplete="off"></div>'; };
@@ -527,6 +598,10 @@ function campiPosizione(it, i) {
     h += dett + '<div class="campi">' + campoLista(it, i, 'serie', 'Serie / materiale', 'dl', 'f') + campoLista(it, i, 'colore', 'Colore', 'dl', 'f') + '</div>';
   }
 
+  if (CON_TELAIO.indexOf(cat) >= 0) {
+    h += '<div class="scelte" style="margin-top:8px">' + chip(it, i, 'telaioLati', 'Telaio lato per lato (Z / L e rifili)') + '</div>';
+    if (it.telaioLati) h += bloccoTelaioLati(it, i, rF);
+  }
   var notaObbl = cat === 'varie' || it.soloRiparazione;
   h += '<div class="campi g1" style="margin-top:12px"><div class="campo"><label for="' + idc(i, 'nota') + '">Nota' + reqMark(notaObbl ? 1 : 0) + '</label>' +
     '<textarea id="' + idc(i, 'nota') + '" data-f="nota" data-i="' + i + '" rows="2" placeholder="' + (notaObbl ? 'Descrivi l\'intervento da fare…' : 'Annotazioni per produzione e montaggio…') + '">' + esc(it.nota) + '</textarea></div></div>';
@@ -644,6 +719,11 @@ document.addEventListener('input', function (e) {
     var prima = categoria(it.tipologia);
     it[t.dataset.f] = t.value; t.removeAttribute('aria-invalid');
     if (t.dataset.f === 'PZ') aggiornaConteggi();
+    if (PRESE.indexOf(t.dataset.f) >= 0 && it.trePrese) {
+      calcolaPrese(it);
+      ['L', 'H'].forEach(function (f) { var el = $('[data-f="' + f + '"][data-i="' + i + '"]'); if (el) { el.value = it[f]; el.removeAttribute('aria-invalid'); } });
+      var es = $('[data-esito-prese="' + i + '"]'); if (es) es.innerHTML = esitoPrese(it);
+    }
     if (t.dataset.f === 'modelloPorta') { var vb = $('[data-sub="' + i + '"] [data-vetri-bl]'); if (vb) vb.hidden = !vetriBlindata(it); }
     if (t.dataset.f === 'tipologia' && categoria(t.value) !== prima) ridisegnaCampi(i);
     aggiornaTestaPos(i);
@@ -668,7 +748,13 @@ document.addEventListener('change', function (e) {
     if (t.dataset.hchk === 'cantiereDiverso') aggiornaCantiere();
     salvaPresto();
   } else if (t.dataset.fchk !== undefined) {
-    var i = +t.dataset.i; S.items[i][t.dataset.fchk] = t.checked; salvaPresto(); ridisegnaCampi(i);
+    var i = +t.dataset.i, itc = S.items[i]; itc[t.dataset.fchk] = t.checked;
+    if (t.dataset.fchk === 'trePrese' && t.checked) { // si parte dalle misure già scritte
+      if (!itc.L_centro && itc.L) itc.L_centro = itc.L;
+      if (!itc.H_centro && itc.H) itc.H_centro = itc.H;
+      calcolaPrese(itc);
+    }
+    salvaPresto(); ridisegnaCampi(i); aggiornaTestaPos(i);
   } else if (t.tagName === 'SELECT' && t.dataset.f !== undefined) {
     var k = +t.dataset.i; S.items[k][t.dataset.f] = t.value;
     if (t.dataset.f === 'cassonetto' && t.value === 'si' && !S.items[k].cas.PZ) S.items[k].cas.PZ = S.items[k].PZ || '';
@@ -695,6 +781,14 @@ document.addEventListener('click', function (e) {
     S.items.splice(i + 1, 0, c); salvaPresto(); disegnaPosizioni();
     var nuova = $('[data-pos="' + (i + 1) + '"]'); if (nuova) nuova.scrollIntoView({ behavior: 'smooth', block: 'start' });
   } else if (a === 'confirm') { it._confirm = true; salvaPresto(); ridisegnaPosizione(i); }
+  else if (a === 'prese-uguali') {
+    var primaL = PRESE_L.map(function (f) { return it[f]; }).filter(function (v) { return String(v || '').trim(); })[0];
+    var primaH = PRESE_H.map(function (f) { return it[f]; }).filter(function (v) { return String(v || '').trim(); })[0];
+    if (!primaL && !primaH) { avviso('Scrivi prima almeno una larghezza o un\'altezza', 'errore'); return; }
+    PRESE_L.forEach(function (f) { if (!String(it[f] || '').trim() && primaL) it[f] = primaL; });
+    PRESE_H.forEach(function (f) { if (!String(it[f] || '').trim() && primaH) it[f] = primaH; });
+    calcolaPrese(it); salvaPresto(); ridisegnaCampi(i); aggiornaTestaPos(i);
+  }
   else if (a === 'edit-disegno') editaMedia(it.disegno, 'Disegno · posizione ' + (i + 1), true, function (m) { it.disegno = m; salvaPresto(); ridisegnaCampi(i); });
   else if (a === 'del-disegno') confermaTogli('il disegno').then(function (ok) { if (ok) { it.disegno = null; salvaPresto(); ridisegnaCampi(i); } });
   else if (a === 'edit-casdis') editaMedia(it.cas.disegno, 'Disegno del cassonetto', true, function (m) { it.cas.disegno = m; salvaPresto(); ridisegnaCampi(i); });
@@ -708,6 +802,13 @@ document.addEventListener('click', function (e) {
 });
 document.addEventListener('keydown', function (e) {
   if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.media[role=button]')) { e.preventDefault(); e.target.click(); }
+});
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('[data-tm]'); if (!b) return;
+  var i = +b.dataset.i, it = S.items[i]; if (!it) return;
+  it.tipoMisura = it.tipoMisura === b.dataset.tm ? '' : b.dataset.tm;
+  salvaPresto(); ridisegnaCampi(i);
+  if (it.tipoMisura === 'altro') { var inp = $('[data-f="tipoMisuraAltro"][data-i="' + i + '"]'); if (inp) inp.focus({ preventScroll: true }); }
 });
 function confermaTogli(cosa) { return conferma('Togliere ' + cosa + '?', 'Non si può recuperare.', 'Togli'); }
 
@@ -795,6 +896,7 @@ function suggerisciRubrica(input) {
 }
 function compilaDaContatto(c) {
   ['cliente', 'tel', 'email', 'via', 'citofono', 'referente', 'viaCantiere'].forEach(function (k) { S[k] = (k === 'cliente' ? c.nome : c[k]) || ''; });
+  ['piano', 'mezzoSalita'].forEach(function (k) { if (c[k]) S[k] = c[k]; });
   if (!S.citofono && c.vianote) S.citofono = c.vianote;
   S.wa = !!c.wa; S.tg = !!c.tg; S.tipoCliente = c.tipoCliente || 'privato'; S.cantiereDiverso = !!c.cantiereDiverso;
   S.lat = c.lat == null ? null : c.lat; S.lng = c.lng == null ? null : c.lng;
@@ -805,6 +907,7 @@ function compilaDaContatto(c) {
 function salvaInRubrica() {
   var nome = (S.cliente || '').trim(); if (!nome) return Promise.resolve();
   var c = { nome: nome, tel: S.tel, email: S.email, wa: S.wa, tg: S.tg, via: S.via, citofono: S.citofono, tipoCliente: S.tipoCliente, referente: S.referente,
+    piano: S.piano, mezzoSalita: S.mezzoSalita,
     cantiereDiverso: S.cantiereDiverso, viaCantiere: S.viaCantiere, lat: S.lat, lng: S.lng, latCantiere: S.latCantiere, lngCantiere: S.lngCantiere };
   var k = rubrica.findIndex(function (x) { return (x.nome || '').toLowerCase().trim() === nome.toLowerCase(); });
   if (k >= 0) rubrica[k] = c; else rubrica.push(c);
@@ -1143,12 +1246,14 @@ var ETICHETTE = { pos: 'Locale', tipologia: 'Tipologia', L: 'Larghezza L', H: 'A
   hmaniglia: 'H maniglia', modelloPorta: 'Modello', modelloSerratura: 'Modello serratura', manigliaInt: 'Maniglia interna', manigliaEst: 'Maniglia esterna',
   pannelloEstColore: 'Colore pannello esterno', pannelloIntColore: 'Colore pannello interno', coloreFerrInt: 'Colore ferramenta interna',
   coloreFerrEst: 'Colore ferramenta esterna', L_spigoli: 'Cassonetto: L spigoli', L_infisso: 'Cassonetto: L infisso', P_dx: 'Cassonetto: profondità DX',
-  tipo: 'Cassonetto: tipo', nota: 'Nota (descrivi l\'intervento)' };
+  tipo: 'Cassonetto: tipo', nota: 'Nota (descrivi l\'intervento)',
+  L_alto: 'L alto', L_centro: 'L centro', L_basso: 'L basso', H_sx: 'H sinistra', H_centro: 'H centro', H_dx: 'H destra',
+  tipoMisuraAltro: 'Che misura hai preso (scrivila)', tl_sopra: 'Telaio sopra', tl_sx: 'Telaio sinistra', tl_dx: 'Telaio destra', tl_sotto: 'Telaio sotto' };
 function controllaCampi() {
   $$('[aria-invalid="true"]').forEach(function (x) { x.removeAttribute('aria-invalid'); });
   var mancano = [], avvisi = [];
   var segna = function (el, pos, testo) { if (el) el.setAttribute('aria-invalid', 'true'); mancano.push({ el: el, pos: pos, testo: testo }); };
-  [['c_cliente', 'Cliente'], ['c_tel', 'Telefono'], ['c_via', 'Indirizzo del cliente'], ['c_data', 'Data del rilievo'], ['c_rilevatore', 'Rilevatore']]
+  [['c_cliente', 'Cliente'], ['c_tel', 'Telefono'], ['c_via', 'Indirizzo del cliente'], ['c_piano', 'Piano'], ['c_data', 'Data del rilievo'], ['c_rilevatore', 'Rilevatore']]
     .concat(S.cantiereDiverso ? [['c_via_cantiere', 'Indirizzo del cantiere']] : []).forEach(function (x) {
       var el = $('#' + x[0]); if (!el.value.trim()) segna(el, 'Cliente', x[1]);
     });
@@ -1175,6 +1280,15 @@ function controllaCampi() {
       else if (cat === 'cassonetto_solo') req = req.concat(['serie', 'colore']);
     } else if (!String(it.nota || '').trim()) req.push('nota');
     if (it.misuraLuce) req.push('L_luce', 'H_luce');
+    if (it.trePrese && cat !== 'cassonetto_solo') req = req.concat(PRESE_L, PRESE_H);
+    if (it.telaioLati && CON_TELAIO.indexOf(cat) >= 0) {
+      req = req.filter(function (f) { return f !== 'telaio'; }); // il telaio è descritto lato per lato
+      if (!opz) LATI.forEach(function (l) { req.push('tl_' + l[0]); });
+    }
+    if (!opz && cat !== 'cassonetto_solo') {
+      if (!it.tipoMisura) segna($('[data-tm-gruppo="' + i + '"]'), P, 'Che misura hai preso (esterne, luce muro…)');
+      else if (it.tipoMisura === 'altro') req.push('tipoMisuraAltro');
+    }
     req.forEach(function (f) { if (!String(it[f] || '').trim()) segna($('[data-f="' + f + '"][data-i="' + i + '"]'), P, ETICHETTE[f] || f); });
     if (!opz && haCassonetto(it)) {
       ['L_spigoli', 'L_infisso', 'H', 'P_dx', 'tipo'].concat(categoria(it.tipologia) === 'cassonetto_solo' ? [] : ['PZ']).forEach(function (f) {
@@ -1218,6 +1332,7 @@ function controlla(perCosa) {
 function specifiche(it) {
   var cat = categoria(it.tipologia), sp = [];
   var add = function (k, v) { var c = String(v == null ? '' : v).trim(); if (c) sp.push([k, c]); };
+  if (it.tipoMisura) add('Tipo misura', it.tipoMisura === 'altro' ? (it.tipoMisuraAltro || 'Altro') : TESTO_MISURA[it.tipoMisura]);
   if (it.misuraLuce && (it.L_luce || it.H_luce)) add('Misura luce', (it.L_luce || '-') + ' × ' + (it.H_luce || '-') + ' mm');
   if (it.soloRiparazione) add('Intervento', 'Solo riparazione / parziale');
   add('Modello', it.modelloPorta); add('Serie', it.serie); add('Colore', it.colore); add('Vetri/Pannelli', it.vetri); add('Telaio', it.telaio);
@@ -1239,6 +1354,22 @@ function specifiche(it) {
   if (cat === 'serramento' || cat === 'veranda') add('Cassonetto', it.cassonetto === 'si' ? 'Sì' : 'No');
   return sp;
 }
+/* righe che non stanno in mezza colonna */
+function righeLunghe(it) {
+  var r = [], cat = categoria(it.tipologia);
+  if (it.trePrese && cat !== 'cassonetto_solo') {
+    var v = function (f) { return it[f] || '-'; };
+    r.push('Tre prese - L alto/centro/basso: ' + PRESE_L.map(v).join(' / ') + ' - H sinistra/centro/destra: ' + PRESE_H.map(v).join(' / ') + ' mm (in L e H la minima)' +
+      (it.D1 || it.D2 ? ' - Diagonali: ' + v('D1') + ' / ' + v('D2') + ' mm' : ''));
+  }
+  if (it.telaioLati && CON_TELAIO.indexOf(cat) >= 0) {
+    r.push('Telaio per lato - ' + LATI.map(function (l) {
+      var t = it['tl_' + l[0]]; return l[1].toLowerCase() + ' ' + (t === 'nessuno' ? 'a muro' : (t || '-')) + (it['rf_' + l[0]] ? ' rifilo ' + it['rf_' + l[0]] : '');
+    }).join(', '));
+  }
+  return r;
+}
+function avvisiPdf(it) { return it.trePrese && categoria(it.tipologia) !== 'cassonetto_solo' ? analisiPrese(it).avvisi : []; }
 function rigaCassonetto(it) {
   var c = it.cas || {}, pdx = c.P_dx || c.P || '-';
   return 'Cassonetto ' + (c.tipo || '') + ': L spigoli ' + (c.L_spigoli || c.L || '-') + (c.L_infisso ? ' (L infisso ' + c.L_infisso + ')' : '') +
@@ -1314,6 +1445,9 @@ function creaPdf() {
     righeCli.push([S.cantiereDiverso ? 'Indirizzo cliente' : 'Indirizzo', S.via || '']);
     if (S.cantiereDiverso && S.viaCantiere) righeCli.push(['Indirizzo cantiere', S.viaCantiere]);
     if (S.citofono) righeCli.push(['Citofono / note', S.citofono]);
+    var posa = [S.piano, S.mezzoSalita ? 'salita: ' + S.mezzoSalita : '', S.difficolta ? 'difficoltà ' + S.difficolta : ''].filter(Boolean).join(' - ');
+    if (posa) righeCli.push(['Posa e logistica', posa]);
+    if (S.notePosa) righeCli.push(['Note per la posa', S.notePosa]);
     doc.setFontSize(9.5);
     var LBL = 32, larg = W - 8 - LBL;
     var blocchi = righeCli.map(function (r) { F('normal'); return [r[0], doc.splitTextToSize(pdfTxt(r[1]) || '-', larg)]; });
@@ -1361,6 +1495,12 @@ function creaPdf() {
         }
         y += 4.6;
       }
+      righeLunghe(it).forEach(function (t) {
+        var ll = doc.splitTextToSize(pdfTxt(t), W); spazio(ll.length * 4.3 + 2); F('normal'); col(TESTO); doc.text(ll, M, y + 3.5); y += ll.length * 4.3 + 1;
+      });
+      avvisiPdf(it).forEach(function (t) {
+        var la = doc.splitTextToSize(pdfTxt('ATTENZIONE: ' + t), W); spazio(la.length * 4.3 + 2); F('bold'); doc.setTextColor(208, 55, 49); doc.text(la, M, y + 3.5); y += la.length * 4.3 + 1;
+      });
       if (haCassonetto(it)) {
         var cl = doc.splitTextToSize(pdfTxt(rigaCassonetto(it)), W);
         spazio(cl.length * 4.3 + 2); F('bold'); col(INK); doc.text(cl, M, y + 3.5); y += cl.length * 4.3 + 1.5;

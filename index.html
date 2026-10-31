@@ -15,7 +15,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="app.css?v=3.0.0">
+<link rel="stylesheet" href="app.css?v=3.1.0">
 </head>
 <body>
 <!-- icone: tratto 1.6 come le icone del sito -->
@@ -157,6 +157,38 @@
       </div>
     </div>
 
+    <h2 class="sez-titolo">Accesso al cantiere</h2>
+    <div class="campi">
+      <div class="campo">
+        <label for="c_piano">Piano <i class="req">*</i></label>
+        <div class="combo">
+          <input id="c_piano" data-h="piano" data-dd="piano" autocomplete="off" placeholder="Es. 3° piano" role="combobox" aria-expanded="false" aria-autocomplete="list">
+          <button type="button" class="combo-freccia" tabindex="-1" aria-label="Mostra tutti i piani"><svg class="ico ico-s"><use href="#i-giu"/></svg></button>
+          <div class="combo-menu" role="listbox" hidden></div>
+        </div>
+      </div>
+      <div class="campo">
+        <label for="c_mezzo">Mezzo di salita</label>
+        <div class="combo">
+          <input id="c_mezzo" data-h="mezzoSalita" data-dd="mezzoSalita" autocomplete="off" placeholder="Es. scala aerea" role="combobox" aria-expanded="false" aria-autocomplete="list">
+          <button type="button" class="combo-freccia" tabindex="-1" aria-label="Mostra tutti i mezzi di salita"><svg class="ico ico-s"><use href="#i-giu"/></svg></button>
+          <div class="combo-menu" role="listbox" hidden></div>
+        </div>
+      </div>
+      <div class="campo campo-largo">
+        <span class="etichetta">Difficoltà</span>
+        <div class="seg" role="group" aria-label="Difficoltà del cantiere">
+          <button type="button" data-diff="facile" aria-pressed="false">Facile</button>
+          <button type="button" data-diff="media" aria-pressed="false">Media</button>
+          <button type="button" data-diff="difficile" aria-pressed="false">Difficile</button>
+        </div>
+      </div>
+      <div class="campo campo-largo">
+        <label for="c_noteposa">Note per la posa</label>
+        <textarea id="c_noteposa" data-h="notePosa" rows="2" placeholder="Es. prenotare la scala aerea · ZTL · ascensore piccolo · orari del condominio"></textarea>
+      </div>
+    </div>
+
     <h2 class="sez-titolo">Rilievo</h2>
     <div class="campi">
       <div class="campo">
@@ -230,7 +262,7 @@
   </div>
 </div>
 
-<script src="dbx.js?v=3.0.0"></script>
-<script src="app.js?v=3.0.0"></script>
+<script src="dbx.js?v=3.1.0"></script>
+<script src="app.js?v=3.1.0"></script>
 </body>
 </html>

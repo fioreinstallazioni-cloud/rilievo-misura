@@ -22,6 +22,18 @@ blu DF `#2F6FD0`).
 - **PDF** crea un vero file PDF (anche offline) da condividere su WhatsApp/email o salvare.
 - Tasto «indietro» del telefono: chiude la finestra aperta invece di uscire dall'app.
 
+## Novità della 3.1 (idee prese dai video di fliwoX)
+
+- **«Che misura hai preso?»** per ogni posizione: esterne (fuori telaio), luce muro, finita, altro.
+  Obbligatorio dove sono obbligatorie L e H: in officina devono sapere se togliere o no.
+- **Tre prese per lato** (spunta): L alto/centro/basso, H sinistra/centro/destra, diagonali facoltative.
+  In L e H va la **minima**; se le prese o le diagonali differiscono di più di 5 mm l'app avvisa
+  (muro storto o fuori squadro). «Tutte uguali alla prima» ricopia la prima misura.
+- **Accesso al cantiere** per tutto il rilievo: piano (obbligatorio), mezzo di salita, difficoltà,
+  note per la posa. Nel PDF come «Posa e logistica»; piano e mezzo di salita vanno anche in rubrica.
+- **Telaio lato per lato** (spunta, per infissi, verande, porte, portoni e sportelli): profilo Z / L / T /
+  a muro per ogni lato e rifilo in mm.
+
 ## Installarla sul telefono
 
 1. Apri l'indirizzo dell'app **con la linea** (la prima volta serve internet).
@@ -44,7 +56,7 @@ A gennaio cambia l'anno della cartella in *Impostazioni → Cartella delle comme
 ## Pubblicare una versione nuova
 
 I file dell'app restano in copia sul telefono: perché i telefoni prendano la versione nuova bisogna
-cambiare il numero di versione **in tutti questi punti** (cerca `3.0.0`):
+cambiare il numero di versione **in tutti questi punti** (cerca `3.1.0`):
 
 - `sw.js` → `VERSIONE` e i `?v=` nella lista `FILE_APP` e in `importScripts`
 - `index.html` → i `?v=` di `app.css`, `dbx.js`, `app.js`

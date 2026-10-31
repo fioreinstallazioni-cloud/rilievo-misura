@@ -448,3 +448,14 @@ body.bloccato { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+/* ── 3.1: tipo di misura, tre prese per lato, accesso al cantiere ───────── */
+.seg button small { display: block; font-size: 11px; font-weight: 400; color: var(--color-text-muted); margin-top: 2px; letter-spacing: 0; }
+.seg-misura button { min-height: 50px; padding: 6px 4px; }
+.seg-misura + input { margin-top: 8px; }
+.campo input.calcolato { background: var(--color-surface-2) !important; color: var(--color-text-muted); box-shadow: none; }
+.prese-riepilogo { margin: 12px 0 0; font-size: var(--fs-13); color: var(--color-text-muted); }
+.prese-riepilogo .tecnico { color: var(--color-text); font-weight: 600; }
+.avviso-misure { display: flex; gap: 8px; align-items: flex-start; margin: 8px 0 0; padding: 10px 12px; border-radius: var(--r-campo);
+  background: var(--ambra-velo); color: #6b4105; font-size: var(--fs-13); line-height: 1.4; }
+.avviso-misure .ico { flex: none; margin-top: 1px; color: var(--ambra); }
