@@ -22,6 +22,27 @@ blu DF `#2F6FD0`).
 - **PDF** crea un vero file PDF (anche offline) da condividere su WhatsApp/email o salvare.
 - Tasto «indietro» del telefono: chiude la finestra aperta invece di uscire dall'app.
 
+## Novità della 3.3: disegno tecnico «a parti» (idea presa da fliwoX)
+
+In ogni posizione, accanto a «Disegna», c'è **Disegno tecnico**:
+
+- **Catalogo di 49 modelli pronti** in 7 gruppi: finestre (1–4 ante, anta-ribalta, con vasistas sopra o
+  fisso sotto), portefinestre (con zoccolo, fisso laterale, sopraluce), scorrevoli e alzanti, porte e
+  portoni (con sopraluce e laterali), verande (scorrevoli, battenti, a libro, con sopraluce a vasistas o
+  sottoluce cieco), cancelli e grate (2 ante, pedonale, scorrevole, carraio + pedonale, ringhiera),
+  persiane, zanzariere, pannelli. Il modello prende **L × H della posizione**.
+- **Tocchi una parte e la cambi**: apertura (fisso, battente SX/DX, anta-ribalta, vasistas, a sporgere,
+  scorrevole, bilico, a libro), riempimento (vetro, pannello, sbarre, lamelle, rete, vuoto), verso
+  (interno/esterno), zoccolo cieco; la **dividi** in colonne o righe, aggiungi **sopraluce/sottoluce**,
+  aggiungi o togli un'anta, dai la **misura** alla singola parte (le altre si adattano).
+- **Componi**: «+ Modello a destra / sinistra / sopra / sotto» per affiancare telai (portafinestra +
+  finestra, veranda + porta, carraio + pedonale…).
+- **Vista frontale** (da interno o da esterno, con le quote di ogni parte calcolate da sole) e **pianta**
+  con il verso di apertura delle ante e gli scorrevoli.
+- Nel **PDF** il disegno esce grande, con frontale + pianta e la descrizione di ogni parte; su Dropbox
+  c'è anche `PosNN_disegno_tecnico.jpg`, e nel `dati_….json` lo schema (`tecnico.schema`) per riaprirlo.
+- Il disegno a mano libera resta com'era (per schizzi, note e foto).
+
 ## Novità della 3.2
 
 - **Rubrica aziendale**: i clienti si cercano nella rubrica unica `Ufficio/Rubrica/Rubrica Selvaggia.xlsx`
@@ -71,10 +92,10 @@ A gennaio cambia l'anno della cartella in *Impostazioni → Cartella delle comme
 ## Pubblicare una versione nuova
 
 I file dell'app restano in copia sul telefono: perché i telefoni prendano la versione nuova bisogna
-cambiare il numero di versione **in tutti questi punti** (cerca `3.2.1`):
+cambiare il numero di versione **in tutti questi punti** (cerca `3.3.0`):
 
 - `sw.js` → `VERSIONE` e i `?v=` nella lista `FILE_APP` e in `importScripts`
-- `index.html` → i `?v=` di `app.css`, `dbx.js`, `app.js`
+- `index.html` → i `?v=` di `app.css`, `dbx.js`, `tecnico.js`, `app.js`
 - `app.js` → `VERSIONE_APP`
 
 Alla prima apertura con linea l'app mostra «Nuova versione pronta → Aggiorna ora».
@@ -86,6 +107,7 @@ Alla prima apertura con linea l'app mostra «Nuova versione pronta → Aggiorna 
 | `index.html` | la pagina e le icone |
 | `app.css` | la grafica (token del sito) |
 | `app.js` | il modulo, le schede per tipologia, disegni/foto, mappa, PDF, archivio |
+| `tecnico.js` | il disegno tecnico «a parti»: catalogo dei modelli, frontale, pianta, quote |
 | `dbx.js` | memoria del telefono (IndexedDB) e coda d'invio a Dropbox (usato anche dal service worker) |
 | `sw.js` | service worker: app offline, mappe già viste, invio in background |
 | `vendor/` | jsPDF 2.5.1, Leaflet 1.9.4 e SheetJS 0.18.5 (lettura della rubrica Excel) in locale |

@@ -482,3 +482,59 @@ body.bloccato { overflow: hidden; }
   box-shadow: inset 0 0 0 1px var(--color-divider-forte); background: #fff; }
 .mi-civico input:focus { outline: none; box-shadow: inset 0 0 0 2px var(--color-accent); }
 .mi-nota { font-size: var(--fs-12); color: var(--color-text-muted); }
+
+/* ── 3.3: disegno tecnico «a parti» (tecnico.js) ──────────────────────── */
+.media-tecnico { box-shadow: inset 0 0 0 2px var(--color-accent); }
+.media-etichetta { position: absolute; left: 4px; bottom: 4px; padding: 2px 6px; border-radius: 3px; background: var(--color-accent); color: #fff;
+  font-size: 10px; font-weight: 600; letter-spacing: .02em; pointer-events: none; }
+.media-vuoto { text-align: center; line-height: 1.2; }
+.tec { position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; background: var(--notte); color: var(--notte-text); }
+.tec[hidden], .tec-catalogo[hidden] { display: none !important; }
+.tec-testa, .tec-piede, .tec-cat-testa { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--nero); }
+.tec-testa, .tec-cat-testa { padding-top: calc(10px + var(--safe-t)); }
+.tec-piede { padding-bottom: calc(10px + var(--safe-b)); }
+.tec-testa strong, .tec-cat-testa strong { margin-right: auto; min-width: 0; font-size: var(--fs-15); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tec-spinta { margin-left: auto; }
+.tec-barra { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; padding: 8px 12px; border-bottom: 1px solid rgba(255, 255, 255, .06); }
+.tec-barra label { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-13); font-weight: 600; color: var(--notte-muted); }
+.tec-barra input, .tec-in { width: 80px; min-height: 38px; padding: 6px 8px; border: 0; border-radius: var(--r-campo); background: var(--notte-card); color: #fff;
+  font: 600 16px/1 var(--font-tecnico); text-align: center; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12); }
+.tec-barra input:focus, .tec-in:focus { outline: none; box-shadow: inset 0 0 0 2px var(--color-accent); }
+.tec-mm { font-size: var(--fs-12); color: var(--notte-muted); }
+.tec-schede { display: inline-flex; padding: 3px; border-radius: var(--r-btn); background: var(--notte-card); }
+.tec-schede button { min-height: 34px; padding: 6px 12px; border: 0; border-radius: 3px; background: none; color: var(--notte-muted); font: 600 var(--fs-13)/1 var(--font-body); cursor: pointer; }
+.tec-schede button[aria-pressed="true"] { background: var(--color-accent); color: #fff; }
+.tec-tela { flex: 1 1 auto; min-height: 190px; display: grid; padding: 10px; overflow: hidden; }
+.tec-tela svg { width: 100%; height: 100%; display: block; background: #fff; border-radius: var(--r-btn); box-shadow: 0 10px 40px rgba(0, 0, 0, .45); touch-action: manipulation; }
+.tec-pannello { flex: 0 0 auto; max-height: 40vh; overflow-y: auto; padding: 12px; background: var(--nero); border-top: 1px solid rgba(255, 255, 255, .06); }
+.tec-p-titolo { display: flex; align-items: center; gap: 8px; margin: 0; font-weight: 600; font-size: var(--fs-15); }
+.tec-num { font-family: var(--font-tecnico); color: var(--notte-ink); }
+.tec-vuoto { margin: 0; font-size: var(--fs-13); line-height: 1.45; color: var(--notte-muted); }
+.tec-sez { margin-top: 12px; }
+.tec-sez > span { display: block; margin-bottom: 6px; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--notte-muted); }
+.tec-sez small { display: block; margin-top: 6px; font-size: var(--fs-12); line-height: 1.4; color: var(--notte-muted); }
+.tec-riga { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; }
+.tec-riga > span:first-child { flex-basis: 100%; margin: 0; }
+.tec-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.tec-chip { min-height: 36px; padding: 7px 11px; border: 0; border-radius: var(--r-btn); background: var(--notte-card); color: var(--notte-text);
+  font: 500 var(--fs-13)/1.1 var(--font-body); cursor: pointer; }
+.tec-chip:hover { background: #2a3040; }
+.tec-chip[aria-pressed="true"] { background: var(--color-accent); color: #fff; font-weight: 600; }
+.tec-pericolo { color: #ff9a94; }
+.tec-link { margin-left: auto; padding: 6px 4px; border: 0; background: none; color: var(--notte-ink); font: 600 var(--fs-13)/1 var(--font-body); cursor: pointer; }
+.tec-catalogo { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; background: var(--notte); }
+.tec-cat-schede { flex: none; display: flex; gap: 6px; padding: 10px 12px; overflow-x: auto; scrollbar-width: none; }
+.tec-cat-schede::-webkit-scrollbar { display: none; }
+.tec-cat-schede .tec-chip { flex: none; }
+.tec-cat-griglia { flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; align-content: start; padding: 2px 12px 12px; }
+.tec-modello { display: flex; flex-direction: column; gap: 6px; padding: 10px 8px 8px; border: 0; border-radius: var(--r-campo); background: #fff; color: var(--color-text); font: inherit; cursor: pointer; }
+.tec-modello:hover, .tec-modello:focus-visible { box-shadow: 0 0 0 3px var(--color-accent); outline: none; }
+.tec-modello svg { width: 100%; height: 96px; display: block; }
+.tec-modello span { font-size: var(--fs-12); line-height: 1.3; text-align: center; color: var(--color-text-muted); }
+.tec-cat-nota { flex: none; margin: 0; padding: 10px 12px calc(10px + var(--safe-b)); background: var(--nero); font-size: var(--fs-12); color: var(--notte-muted); }
+@media (min-width: 900px) {
+  .tec { display: grid; grid-template-columns: 1fr 380px; grid-template-rows: auto auto 1fr auto; }
+  .tec-testa, .tec-barra, .tec-piede { grid-column: 1 / -1; }
+  .tec-tela { grid-column: 1; grid-row: 3; }
+  .tec-pannello { grid-column: 2; grid-row: 3; max-height: none; border-top: 0; border-left: 1px solid rgba(255, 255, 255, .06); }
+}

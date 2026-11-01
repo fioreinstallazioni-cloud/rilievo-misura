@@ -9,7 +9,7 @@
 (function () {
 'use strict';
 
-var VERSIONE_APP = '3.2.1';
+var VERSIONE_APP = '3.3.0';
 var BASE_PREDEFINITA = '/Ufficio/COMMESSE/Commesse Installazioni 2026';
 var COMMESSE_PREDEFINITE = [
   'C47-SIRYUS SRL', 'C46-Mes group', 'C45-Tonino Russo', 'C44-Teatro Bracco', 'C35-Tecno3-Telai',
@@ -177,7 +177,7 @@ function posizioneVuota() {
     spioncino: '', tipoFissaggio: '', chiusuraSuppl: false, doppiaSerratura: false, chiudiportaAereo: false,
     manigliaInt: '', manigliaEst: '', numChiavi: '', decorazioneVetriIndirizzo: false, decorazioneTesto: '', pulsantieraCitofono: false, serraturaChiave: false,
     cas: { L: '', L_spigoli: '', L_infisso: '', H: '', P: '', P_dx: '', P_sx: '', PZ: '', tipo: '', manovra: '', note: '', foto: [], disegno: null },
-    foto: [], disegno: null };
+    foto: [], disegno: null, tecnico: null };
 }
 /* porta i dati salvati dalle versioni precedenti alla forma attuale */
 function normalizza(s) {
@@ -311,11 +311,13 @@ function avviso(testo, tipo, ms) {
    portare fuori dall'app. */
 function spingiStoria() { try { if (!(history.state && history.state.dfGuardia)) history.pushState({ dfGuardia: 1 }, ''); } catch (e) {} }
 function tornaStoria() {}
-function qualcosaAperto() { return pilaOverlay.length > 0 || !$('#editor').hidden || !$('#mappa').hidden; }
+function tecnicoAperto() { return !!(window.DFTecnico && DFTecnico.aperto()); }
+function qualcosaAperto() { return pilaOverlay.length > 0 || !$('#editor').hidden || !$('#mappa').hidden || tecnicoAperto(); }
 window.addEventListener('popstate', function () {
   if (history.state && history.state.dfGuardia) return;
   if (pilaOverlay.length) chiudiOverlay(null, undefined, true);
   else if (!$('#editor').hidden) indietroEditor();
+  else if (tecnicoAperto()) DFTecnico.indietro();
   else if (!$('#mappa').hidden) chiudiMappa(true);
   if (qualcosaAperto()) spingiStoria();
 });
@@ -341,7 +343,7 @@ function chiudiOverlay(voce, valore, daStoria) {
   pilaOverlay = pilaOverlay.filter(function (v) { return v !== voce; });
   voce.el.classList.remove('aperto'); voce.velo.classList.remove('aperto');
   setTimeout(function () { voce.el.remove(); voce.velo.remove(); }, 380);
-  if (!pilaOverlay.length && $('#editor').hidden && $('#mappa').hidden) document.body.classList.remove('bloccato');
+  if (!qualcosaAperto()) document.body.classList.remove('bloccato');
   if (voce.onClose) voce.onClose(valore);
 }
 document.addEventListener('keydown', function (e) {
@@ -624,7 +626,7 @@ function campiPosizione(it, i) {
   h += '<div class="campi g1" style="margin-top:12px"><div class="campo"><label for="' + idc(i, 'nota') + '">Nota' + reqMark(notaObbl ? 1 : 0) + '</label>' +
     '<textarea id="' + idc(i, 'nota') + '" data-f="nota" data-i="' + i + '" rows="2" placeholder="' + (notaObbl ? 'Descrivi l\'intervento da fare…' : 'Annotazioni per produzione e montaggio…') + '">' + esc(it.nota) + '</textarea></div></div>';
 
-  h += '<h3 class="sez-titolo">Disegno e foto</h3><div class="media-griglia">' + miniatura(it.disegno, 'disegno', i) +
+  h += '<h3 class="sez-titolo">Disegno e foto</h3><div class="media-griglia">' + miniaturaTecnico(it, i) + miniatura(it.disegno, 'disegno', i) +
     it.foto.map(function (m, j) { return miniaturaFoto(m, 'foto', i, j); }).join('') +
     '<button type="button" class="media media-vuoto" data-act="addfoto" data-i="' + i + '">' + ic('camera') + 'Foto</button></div>';
   return h;
@@ -651,6 +653,35 @@ function miniatura(m, tipo, i) {
   if (src) return '<div class="media media-disegno" role="button" tabindex="0" data-act="edit-' + tipo + '" data-i="' + i + '" aria-label="Modifica il disegno"><img src="' + src + '" alt="">' +
     '<button type="button" class="media-togli" data-act="del-' + tipo + '" data-i="' + i + '" aria-label="Togli il disegno"><span>' + ic('x') + '</span></button></div>';
   return '<button type="button" class="media media-vuoto" data-act="edit-' + tipo + '" data-i="' + i + '">' + ic('matita') + 'Disegna</button>';
+}
+/* disegno tecnico «a parti» (tecnico.js): si riapre e si modifica, non è un'immagine piatta */
+function miniaturaTecnico(it, i) {
+  var src = mediaSrc(it.tecnico);
+  if (src) return '<div class="media media-disegno media-tecnico" role="button" tabindex="0" data-act="edit-tecnico" data-i="' + i + '" aria-label="Modifica il disegno tecnico"><img src="' + src + '" alt="">' +
+    '<span class="media-etichetta">Tecnico</span><button type="button" class="media-togli" data-act="del-tecnico" data-i="' + i + '" aria-label="Togli il disegno tecnico"><span>' + ic('x') + '</span></button></div>';
+  return '<button type="button" class="media media-vuoto" data-act="edit-tecnico" data-i="' + i + '">' + ic('modelli') + 'Disegno tecnico</button>';
+}
+function categoriaTecnico(it) {
+  var c = categoria(it.tipologia), t = (it.tipologia || '').toLowerCase();
+  if (c === 'veranda') return 'Verande';
+  if (c === 'ferro_esterno') return 'Cancelli e grate';
+  if (c === 'accessori') return 'Persiane e altro';
+  if (c === 'porta_blindata' || c === 'portone_palazzo' || c === 'porta_ferro') return 'Porte';
+  if (/scorrev|alzant/.test(t)) return 'Scorrevoli';
+  if (/portafinestr|porte ?finestr|porta ?finestr/.test(t)) return 'Portefinestre';
+  if (/port[ae]/.test(t)) return 'Porte';
+  return 'Finestre';
+}
+function apriTecnico(i) {
+  var it = S.items[i]; if (!it || !window.DFTecnico) return;
+  document.body.classList.add('bloccato'); spingiStoria();
+  DFTecnico.apri({
+    schema: it.tecnico && it.tecnico.schema, L: parseInt(it.L, 10) || 0, H: parseInt(it.H, 10) || 0,
+    titolo: 'Disegno tecnico · posizione ' + (i + 1), categoria: categoriaTecnico(it), avviso: function (t) { avviso(t, 'errore'); },
+    conferma: function () { return conferma('Uscire senza salvare?', 'Le modifiche al disegno tecnico andranno perse.', 'Esci'); },
+    onSave: function (m) { it.tecnico = m; salvaPresto(); ridisegnaCampi(i); avviso('Disegno tecnico salvato'); },
+    onClose: function () { if (!qualcosaAperto()) document.body.classList.remove('bloccato'); }
+  });
 }
 function miniaturaFoto(m, tipo, i, j) {
   return '<div class="media" role="button" tabindex="0" data-act="edit' + tipo + '" data-i="' + i + '" data-j="' + j + '" aria-label="Apri la foto"><img src="' + mediaSrc(m) + '" alt="">' +
@@ -807,6 +838,8 @@ document.addEventListener('click', function (e) {
     PRESE_H.forEach(function (f) { if (!String(it[f] || '').trim() && primaH) it[f] = primaH; });
     calcolaPrese(it); salvaPresto(); ridisegnaCampi(i); aggiornaTestaPos(i);
   }
+  else if (a === 'edit-tecnico') apriTecnico(i);
+  else if (a === 'del-tecnico') confermaTogli('il disegno tecnico').then(function (ok) { if (ok) { it.tecnico = null; salvaPresto(); ridisegnaCampi(i); } });
   else if (a === 'edit-disegno') editaMedia(it.disegno, 'Disegno · posizione ' + (i + 1), true, function (m) { it.disegno = m; salvaPresto(); ridisegnaCampi(i); });
   else if (a === 'del-disegno') confermaTogli('il disegno').then(function (ok) { if (ok) { it.disegno = null; salvaPresto(); ridisegnaCampi(i); } });
   else if (a === 'edit-casdis') editaMedia(it.cas.disegno, 'Disegno del cassonetto', true, function (m) { it.cas.disegno = m; salvaPresto(); ridisegnaCampi(i); });
@@ -1225,7 +1258,7 @@ $('#mappaGps').onclick = gpsSuMappa;
 function chiudiMappa(daStoria) {
   if ($('#mappa').hidden) return;
   $('#mappa').hidden = true; if (daStoria !== true) tornaStoria();
-  if (!pilaOverlay.length && $('#editor').hidden) document.body.classList.remove('bloccato');
+  if (!qualcosaAperto()) document.body.classList.remove('bloccato');
 }
 $('#mappaChiudi').onclick = function () { chiudiMappa(); };
 $('#mappaConferma').onclick = function () {
@@ -1362,7 +1395,7 @@ function chiudiEditor(daStoria) {
   if ($('#editor').hidden) return;
   $('#editor').hidden = true; ed.puntatore = null; ed.cur = null;
   if (!daStoria) tornaStoria();
-  if (!pilaOverlay.length && $('#mappa').hidden) document.body.classList.remove('bloccato');
+  if (!qualcosaAperto()) document.body.classList.remove('bloccato');
 }
 function tratteggiNuovi() { return !!ed.modificato; } // solo se in questa apertura è cambiato qualcosa
 $('#edChiudi').onclick = function () {
@@ -1458,7 +1491,7 @@ function controllaCampi() {
         if (!String(v || '').trim()) segna($('[data-cf="' + f + '"][data-i="' + i + '"]'), P, f === 'H' ? 'Cassonetto: altezza H' : f === 'PZ' ? 'Cassonetto: pezzi' : (ETICHETTE[f] || f));
       });
     }
-    if (!mediaSrc(it.disegno)) avvisi.push({ el: $('[data-act="edit-disegno"][data-i="' + i + '"]'), pos: P, testo: 'Manca il disegno' });
+    if (!mediaSrc(it.disegno) && !mediaSrc(it.tecnico)) avvisi.push({ el: $('[data-act="edit-disegno"][data-i="' + i + '"]'), pos: P, testo: 'Manca il disegno' });
     if (!it.foto.length) avvisi.push({ el: $('[data-act="addfoto"][data-i="' + i + '"]'), pos: P, testo: 'Manca la foto' });
   });
   return { mancano: mancano, avvisi: avvisi };
@@ -1678,6 +1711,19 @@ function creaPdf() {
         var nl = doc.splitTextToSize(pdfTxt('Nota: ' + it.nota), W);
         spazio(nl.length * 4.3 + 2); F('normal'); col(TESTO); doc.text(nl, M, y + 3.5); y += nl.length * 4.3 + 1.5;
       }
+      // disegno tecnico: grande, a tutta larghezza, con la descrizione delle parti
+      var tec = mediaSrc(it.tecnico);
+      var passoTec = !tec ? Promise.resolve() : prepImg(tec, 1600, 0.85).then(function (im) {
+        if (!im) return;
+        var dw = W, dh = dw * im.h / im.w; if (dh > 125) { dh = 125; dw = dh * im.w / im.h; }
+        spazio(dh + 6);
+        try { doc.addImage(im.data, 'JPEG', M + (W - dw) / 2, y + 2, dw, dh); } catch (e) {}
+        y += dh + 3;
+        if (it.tecnico.descr) {
+          var dl = doc.splitTextToSize(pdfTxt('Disegno tecnico: ' + it.tecnico.descr), W);
+          spazio(dl.length * 4.3 + 2); F('normal'); col(TESTO); doc.text(dl, M, y + 3.5); y += dl.length * 4.3 + 1.5;
+        }
+      });
       // immagini: disegno + foto (+ cassonetto solo se c'è davvero), 3 per riga
       var imgs = [it.disegno].concat(it.foto || []);
       if (haCassonetto(it)) imgs = imgs.concat([it.cas.disegno]).concat(it.cas.foto || []);
@@ -1699,7 +1745,7 @@ function creaPdf() {
           return immagine();
         });
       }
-      return immagine().then(function () {
+      return passoTec.then(immagine).then(function () {
         y += 2; doc.setDrawColor(220, 223, 228); doc.setLineWidth(0.2); doc.line(M, y, PW - M, y); y += 5;
         return prossima();
       });
@@ -1850,7 +1896,7 @@ function mettiInCoda() {
       if (imp.fotoJpg !== false) {
         S.items.forEach(function (it, i) {
           var P = 'Pos' + String(i + 1).padStart(2, '0');
-          var media = [[it.disegno, P + '_disegno']].concat(it.foto.map(function (m, j) { return [m, P + '_foto' + (j + 1)]; }));
+          var media = [[it.tecnico, P + '_disegno_tecnico'], [it.disegno, P + '_disegno']].concat(it.foto.map(function (m, j) { return [m, P + '_foto' + (j + 1)]; }));
           if (haCassonetto(it)) media = media.concat([[it.cas.disegno, P + '_cassonetto_disegno']]).concat(it.cas.foto.map(function (m, j) { return [m, P + '_cassonetto_foto' + (j + 1)]; }));
           media.forEach(function (x) {
             var src = mediaSrc(x[0]); if (!src || src.indexOf('data:image/') !== 0) return;
