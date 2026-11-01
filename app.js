@@ -9,7 +9,7 @@
 (function () {
 'use strict';
 
-var VERSIONE_APP = '3.3.0';
+var VERSIONE_APP = '3.4.0';
 var BASE_PREDEFINITA = '/Ufficio/COMMESSE/Commesse Installazioni 2026';
 var COMMESSE_PREDEFINITE = [
   'C47-SIRYUS SRL', 'C46-Mes group', 'C45-Tonino Russo', 'C44-Teatro Bracco', 'C35-Tecno3-Telai',
@@ -664,7 +664,7 @@ function miniaturaTecnico(it, i) {
 function categoriaTecnico(it) {
   var c = categoria(it.tipologia), t = (it.tipologia || '').toLowerCase();
   if (c === 'veranda') return 'Verande';
-  if (c === 'ferro_esterno') return 'Cancelli e grate';
+  if (c === 'ferro_esterno') return /grat|inferriat/.test(t) && !/cancell/.test(t) ? 'Grate DF' : 'Cancelli e grate';
   if (c === 'accessori') return 'Persiane e altro';
   if (c === 'porta_blindata' || c === 'portone_palazzo' || c === 'porta_ferro') return 'Porte';
   if (/scorrev|alzant/.test(t)) return 'Scorrevoli';

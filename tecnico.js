@@ -24,8 +24,43 @@ function clona(o) { return JSON.parse(JSON.stringify(o)); }
 function rinnovaId(n) { n.id = nid(); if (n.tipo === 'split') n.parti.forEach(function (p) { rinnovaId(p.node); }); return n; }
 
 var B = function (c) { return cella('battente', c); };
+/* cancello: tutte le parti col disegno di grata DF scelto (si cambia toccando la parte) */
+function cancello(nodo, cod) {
+  (function giro(n) { if (n.tipo === 'split') n.parti.forEach(function (p) { giro(p.node); }); else if (n.riemp === 'grata') n.grata = cod; })(nodo);
+  return nodo;
+}
+/* persiana alla napoletana: ante a battente a lamelle che aprono verso l'esterno,
+   con in basso lo sportello che si apre a sporgere (incernierato in alto) */
+function napoletana(ante, sportello) {
+  var anta = function (c) { return cella('battente', c, 'lamelle', { verso: 'esterno', sportello: sportello }); };
+  return ante === 1 ? anta('sx') : divisa('v', [anta('sx'), anta('dx')]);
+}
 var due = function (r) { return divisa('v', [cella('battente', 'sx', r), cella('battente', 'dx', r)]); };
 
+/* ── Grate DF: i 17 disegni del «Catalogo grate DF» (26/10/2026) ─────────
+   Ripresi uno per uno da Dropbox «Cloude code/Catalogo Grate/genera-catalogo.py»
+   (stesse proporzioni, stessi nomi e codici G·01–G·17). Ogni disegno è per
+   UNA anta e si adatta alla misura: le quote fisse del catalogo (borchie,
+   perle, punte) sono riportate allo spessore della sbarra (2,6 nel catalogo). */
+var GRATE = [
+  ['G01', 'Posillipo', 'Sbarre verticali con onde contrapposte in testa e al piede'],
+  ['G02', 'Mergellina', 'Sbarre verticali con due punte parallele'],
+  ['G03', 'Chiaia', 'Maglia a rombi, piatti incrociati a 45°'],
+  ['G04', 'Capodimonte', 'Riquadro centrale con riccioli doppi'],
+  ['G05', 'Procida', 'Solo sbarre orizzontali, linea moderna'],
+  ['G06', 'Ravello', 'Riccioli sotto i traversi del riquadro centrale'],
+  ['G07', 'Ischia', 'Anelli nel riquadro centrale, in alto e in basso'],
+  ['G08', 'Amalfi', 'Quadrotti con nodi a metà altezza'],
+  ['G09', 'Positano', 'Due sbarre con rombo e traversi doppi'],
+  ['G10', 'Caserta', 'Arco a tutto sesto con sbarra centrale'],
+  ['G11', 'Ercolano', 'Quadrotti con punte decorative al centro'],
+  ['G12', 'Capri', 'Sbarre con borchie su tre file'],
+  ['G13', 'Paestum', 'Anelli in testa e al piede, borchie al centro'],
+  ['G14', 'Vesuvio', 'Tre sbarre con terminali a perla e traversi doppi'],
+  ['G15', 'Cuma', 'Traversi doppi e traversi corti sfalsati'],
+  ['G16', 'Baia', 'Fasce di traversi doppi a tre altezze'],
+  ['G17', 'Miseno', 'Croce centrale con borchie quadre']
+];
 /* Il catalogo: [categoria, chiave, nome, L, H, costruttore] */
 var MODELLI = [
   ['Finestre', 'f1sx', '1 anta · cerniere SX', 800, 1200, function () { return B('sx'); }],
@@ -72,26 +107,38 @@ var MODELLI = [
     return divisa('h', [parte(null, divisa('v', [cella('scorrevole', 'dx'), cella('fisso'), cella('scorrevole', 'sx')])), parte(900, divisa('v', [cella('fisso', 'sx', 'pannello'), cella('fisso', 'sx', 'pannello'), cella('fisso', 'sx', 'pannello')]))]);
   }],
   ['Verande', 'verlibro', 'Veranda 4 ante a libro', 3500, 2200, function () { return divisa('v', [cella('libro', 'sx'), cella('libro', 'sx'), cella('libro', 'sx'), cella('libro', 'sx')]); }],
-  ['Cancelli e grate', 'c2', 'Cancello 2 ante', 3000, 1800, function () { return due('sbarre'); }],
-  ['Cancelli e grate', 'c1', 'Cancello pedonale 1 anta', 1100, 1800, function () { return cella('battente', 'sx', 'sbarre'); }],
-  ['Cancelli e grate', 'csc', 'Cancello scorrevole', 4000, 1800, function () { return cella('scorrevole', 'sx', 'sbarre'); }],
-  ['Cancelli e grate', 'cped', 'Carraio 2 ante + pedonale', 4200, 1800, function () { return divisa('v', [parte(1100, cella('battente', 'sx', 'sbarre')), parte(null, due('sbarre'))]); }],
+  ['Cancelli e grate', 'c2', 'Cancello 2 ante · disegno DF', 3000, 1800, function () { return cancello(due('grata'), 'G01'); }],
+  ['Cancelli e grate', 'c1', 'Cancello pedonale 1 anta · disegno DF', 1100, 1800, function () { return cancello(cella('battente', 'sx', 'grata'), 'G01'); }],
+  ['Cancelli e grate', 'csc', 'Cancello scorrevole · disegno DF', 4000, 1800, function () { return cancello(cella('scorrevole', 'sx', 'grata'), 'G05'); }],
+  ['Cancelli e grate', 'cped', 'Carraio 2 ante + pedonale · disegno DF', 4200, 1800, function () { return cancello(divisa('v', [parte(1100, cella('battente', 'sx', 'grata')), parte(null, due('grata'))]), 'G01'); }],
+  ['Cancelli e grate', 'c2s', 'Cancello 2 ante a sbarre semplici', 3000, 1800, function () { return due('sbarre'); }],
   ['Cancelli e grate', 'grfix', 'Grata fissa', 1000, 1200, function () { return cella('fisso', 'sx', 'sbarre'); }],
   ['Cancelli e grate', 'gr2', 'Grata apribile 2 ante', 1200, 1400, function () { return due('sbarre'); }],
   ['Cancelli e grate', 'ringh', 'Ringhiera', 3000, 1000, function () { return cella('fisso', 'sx', 'sbarre'); }],
+  ['Cancelli e grate', 'pnap2', 'Persiana napoletana 2 ante', 1200, 1400, function () { return napoletana(2, 450); }],
+  ['Cancelli e grate', 'pnap2pf', 'Persiana napoletana portafinestra 2 ante', 1300, 2350, function () { return napoletana(2, 700); }],
+  ['Cancelli e grate', 'pnap1', 'Persiana napoletana 1 anta', 700, 1400, function () { return napoletana(1, 450); }],
+  ['Persiane e altro', 'pnap2b', 'Persiana napoletana 2 ante', 1200, 1400, function () { return napoletana(2, 450); }],
+  ['Persiane e altro', 'pnap2pfb', 'Persiana napoletana portafinestra', 1300, 2350, function () { return napoletana(2, 700); }],
   ['Persiane e altro', 'pers2', 'Persiana 2 ante', 1200, 1400, function () { var d = due('lamelle'); d.parti.forEach(function (p) { p.node.verso = 'esterno'; }); return d; }],
   ['Persiane e altro', 'pers1', 'Persiana 1 anta', 700, 1400, function () { return cella('battente', 'sx', 'lamelle', { verso: 'esterno' }); }],
   ['Persiane e altro', 'zanz', 'Zanzariera', 1000, 1400, function () { return cella('fisso', 'sx', 'rete'); }],
   ['Persiane e altro', 'pann', 'Pannello cieco', 1000, 1000, function () { return cella('fisso', 'sx', 'pannello'); }]
 ];
-var CATEGORIE = ['Finestre', 'Portefinestre', 'Scorrevoli', 'Porte', 'Verande', 'Cancelli e grate', 'Persiane e altro'];
+/* le 17 grate del catalogo DF, ognuna come grata apribile a 2 ante (il formato del catalogo) */
+GRATE.forEach(function (g) {
+  MODELLI.push(['Grate DF', 'gr' + g[0], 'G·' + g[0].slice(1) + ' ' + g[1], 1200, 1400, function () {
+    return divisa('v', ['sx', 'dx'].map(function (c) { return cella('battente', c, 'grata', { grata: g[0], verso: 'esterno' }); }));
+  }]);
+});
+var CATEGORIE = ['Finestre', 'Portefinestre', 'Scorrevoli', 'Porte', 'Verande', 'Cancelli e grate', 'Grate DF', 'Persiane e altro'];
 
 var APERTURE = [
   ['fisso', null, 'Fisso'], ['battente', 'sx', 'Battente SX'], ['battente', 'dx', 'Battente DX'],
   ['antaribalta', 'sx', 'Anta-ribalta SX'], ['antaribalta', 'dx', 'Anta-ribalta DX'], ['vasistas', null, 'Vasistas'], ['sporgere', null, 'A sporgere'],
   ['scorrevole', 'sx', 'Scorrevole ←'], ['scorrevole', 'dx', 'Scorrevole →'], ['bilico', null, 'Bilico'], ['libro', 'sx', 'A libro SX'], ['libro', 'dx', 'A libro DX']
 ];
-var RIEMPIMENTI = [['vetro', 'Vetro'], ['pannello', 'Pannello'], ['sbarre', 'Sbarre'], ['lamelle', 'Lamelle'], ['rete', 'Rete'], ['vuoto', 'Vuoto']];
+var RIEMPIMENTI = [['vetro', 'Vetro'], ['pannello', 'Pannello'], ['sbarre', 'Sbarre'], ['grata', 'Grata DF (catalogo)'], ['lamelle', 'Lamelle'], ['rete', 'Rete'], ['vuoto', 'Vuoto']];
 function nomeApertura(n) {
   var a = n.apertura;
   if (a === 'battente' || a === 'antaribalta' || a === 'libro') return { battente: 'battente', antaribalta: 'anta-ribalta', libro: 'a libro' }[a] + ' cerniere ' + (n.cerniere || 'sx').toUpperCase();
@@ -149,6 +196,88 @@ function riga(x1, y1, x2, y2, sw, extra) { return '<line x1="' + f(x1) + '" y1="
 function ret(x, y, w, h, fill, sw, extra) { return '<rect x="' + f(x) + '" y="' + f(y) + '" width="' + f(Math.max(0, w)) + '" height="' + f(Math.max(0, h)) + '" fill="' + fill + '"' + (sw ? ' stroke="' + COL.linea + '" stroke-width="' + f(sw) + '"' : '') + (extra || '') + '/>'; }
 function testo(x, y, t, fs, extra) { return '<text x="' + f(x) + '" y="' + f(y) + '" font-size="' + f(fs) + '" text-anchor="middle" dominant-baseline="middle"' + (extra || '') + '>' + t + '</text>'; }
 
+function nomeGrata(cod) { var g = GRATE.filter(function (x) { return x[0] === cod; })[0]; return g ? 'G·' + g[0].slice(1) + ' ' + g[1] : 'grata'; }
+function disegnoGrata(cod, G, bw) {
+  var k = bw / 2.6, FE = COL.linea, out = [];
+  var a = { x: G.x, y: G.y, w: G.w, h: G.h };
+  var X = function (t) { return a.x + t * a.w; }, Y = function (t) { return a.y + t * a.h; };
+  var Ln = function (x1, y1, x2, y2, w) { return '<line x1="' + f(x1) + '" y1="' + f(y1) + '" x2="' + f(x2) + '" y2="' + f(y2) + '" stroke-width="' + f(w || bw) + '"/>'; };
+  var Pa = function (d, w) { return '<path d="' + d + '" stroke-width="' + f(w || bw) + '" fill="none"/>'; };
+  var Ci = function (cx, cy, r, w) { return '<circle cx="' + f(cx) + '" cy="' + f(cy) + '" r="' + f(r) + '" stroke-width="' + f(w || bw) + '" fill="none"/>'; };
+  var NODO = function (cx, cy) { return '<ellipse cx="' + f(cx) + '" cy="' + f(cy) + '" rx="' + f(2.6 * k) + '" ry="' + f(4.6 * k) + '" fill="' + FE + '" stroke="none"/>'; };
+  var PALLINO = function (cx, cy) { return '<circle cx="' + f(cx) + '" cy="' + f(cy) + '" r="' + f(2.8 * k) + '" fill="' + FE + '" stroke="none"/>'; };
+  var QUADRO = function (cx, cy) { var s = 5.2 * k; return '<rect x="' + f(cx - s / 2) + '" y="' + f(cy - s / 2) + '" width="' + f(s) + '" height="' + f(s) + '" fill="' + FE + '" stroke="none"/>'; };
+  var PUNTA = function (cx, cy) { var h = 6.5 * k, w = 3.4 * k; return '<path d="M' + f(cx) + ' ' + f(cy - h) + ' L' + f(cx + w) + ' ' + f(cy) + ' L' + f(cx) + ' ' + f(cy + h) + ' L' + f(cx - w) + ' ' + f(cy) + 'Z" fill="' + FE + '" stroke="none"/>'; };
+  var v = function (t, p, q) { return Ln(X(t), Y(p == null ? 0 : p), X(t), Y(q == null ? 1 : q)); };
+  var o = function (t, p, q) { return Ln(X(p == null ? 0 : p), Y(t), X(q == null ? 1 : q), Y(t)); };
+  var oo = function (lista) { return lista.map(function (t) { return o(t); }).join(''); };
+  var bombata = function (t, verso, ys) {
+    var x = X(t), d = ['M' + f(x) + ' ' + f(Y(0))];
+    ys.forEach(function (yc) {
+      var y0 = Y(yc - 0.07), y1 = Y(yc + 0.07), ym = Y(yc), dx = verso * a.w * 0.13;
+      d.push('L' + f(x) + ' ' + f(y0) + ' C' + f(x) + ' ' + f(ym - (y1 - y0) * 0.15) + ' ' + f(x + dx) + ' ' + f(ym - (y1 - y0) * 0.35) + ' ' + f(x + dx) + ' ' + f(ym) +
+        ' C' + f(x + dx) + ' ' + f(ym + (y1 - y0) * 0.35) + ' ' + f(x) + ' ' + f(ym + (y1 - y0) * 0.15) + ' ' + f(x) + ' ' + f(y1));
+    });
+    d.push('L' + f(x) + ' ' + f(Y(1))); return Pa(d.join(' '));
+  };
+  var kink = function (t, ys, dx) {
+    var x = X(t), d = ['M' + f(x) + ' ' + f(Y(0))];
+    ys.forEach(function (yc) { d.push('L' + f(x) + ' ' + f(Y(yc - 0.06)) + ' L' + f(x + dx) + ' ' + f(Y(yc)) + ' L' + f(x) + ' ' + f(Y(yc + 0.06))); });
+    d.push('L' + f(x) + ' ' + f(Y(1))); return Pa(d.join(' '));
+  };
+  var riccioloDoppio = function (cy) {
+    var cx = X(0.5), r = a.w * 0.1, e = k;
+    return Pa('M' + f(cx - e) + ' ' + f(cy - r) + ' A' + f(r) + ' ' + f(r) + ' 0 1 0 ' + f(cx - e) + ' ' + f(cy + r), 2.2 * k) +
+      Pa('M' + f(cx + e) + ' ' + f(cy - r) + ' A' + f(r) + ' ' + f(r) + ' 0 1 1 ' + f(cx + e) + ' ' + f(cy + r), 2.2 * k) +
+      Pa('M' + f(cx - r * 0.9) + ' ' + f(cy) + ' A' + f(r * 0.45) + ' ' + f(r * 0.45) + ' 0 1 1 ' + f(cx - r * 0.1) + ' ' + f(cy), 1.8 * k) +
+      Pa('M' + f(cx + r * 0.9) + ' ' + f(cy) + ' A' + f(r * 0.45) + ' ' + f(r * 0.45) + ' 0 1 0 ' + f(cx + r * 0.1) + ' ' + f(cy), 1.8 * k);
+  };
+  var spirale = function (ox, oy, r, verso, s) {
+    var pts = [];
+    for (var q = 0; q <= 48; q++) {
+      var t = q / 48, ang = (-90 * s - verso * 430 * t) * Math.PI / 180, rr = r * (1 - 0.62 * t);
+      pts.push(f(ox + rr * Math.cos(ang)) + ' ' + f(oy + rr * Math.sin(ang)));
+    }
+    return Pa('M' + pts.join(' L'), 2 * k);
+  };
+  var riccioli = function (y, giu) { var s = giu ? 1 : -1, r = a.w * 0.085, cx = X(0.5); return spirale(cx - r, y + s * r, r, 1, s) + spirale(cx + r, y + s * r, r, -1, s); };
+  var rombo = function (t, verso, yc) { var x = X(t), dx = verso * a.w * 0.1; return Pa('M' + f(x) + ' ' + f(Y(0)) + ' L' + f(x) + ' ' + f(Y(yc - 0.06)) + ' L' + f(x + dx) + ' ' + f(Y(yc)) + ' L' + f(x) + ' ' + f(Y(yc + 0.06)) + ' L' + f(x) + ' ' + f(Y(1))); };
+  switch (cod) {
+    case 'G01': out.push(oo([0.1, 0.5, 0.9]), bombata(1 / 3, -1, [0.3, 0.7]), bombata(2 / 3, 1, [0.3, 0.7])); break;
+    case 'G02': out.push(oo([0.1, 0.5, 0.9]), kink(1 / 3, [0.3, 0.7], a.w * 0.12), kink(2 / 3, [0.3, 0.7], a.w * 0.12)); break;
+    case 'G03':
+      var passo = a.w / 2.2, k0 = -Math.ceil(a.h / passo) - 1, k1 = Math.ceil(a.w / passo) + 1;
+      for (var kk = k0; kk <= k1; kk++) { var x0 = a.x + kk * passo; out.push(Ln(x0, a.y, x0 + a.h, a.y + a.h), Ln(x0 + a.w, a.y, x0 + a.w - a.h, a.y + a.h)); }
+      // nel catalogo il passo segue la larghezza: sulle ante molto alte si tengono i rombi quadrati
+      break;
+    case 'G04': out.push(v(1 / 3), v(2 / 3), oo([0.12, 0.3, 0.7, 0.88]), riccioloDoppio(Y(0.21)), riccioloDoppio(Y(0.79))); break;
+    case 'G05': for (var i = 0; i < 12; i++) out.push(o((i + 1) / 13)); break;
+    case 'G06': out.push(v(1 / 3), v(2 / 3), oo([0.1, 0.2, 0.8, 0.9]), riccioli(Y(0.2), true), riccioli(Y(0.8), false)); break;
+    case 'G07': var r7 = a.w * 0.11; out.push(v(1 / 3, 0, 0.14), v(2 / 3, 0, 0.14), v(1 / 3, 0.14, 1), v(2 / 3, 0.14, 1), oo([0.12, 0.3, 0.7, 0.88]), Ci(X(0.5), Y(0.21), r7), Ci(X(0.5), Y(0.79), r7)); break;
+    case 'G08': out.push(v(1 / 3), v(2 / 3), oo([0.1, 0.22, 0.34, 0.66, 0.78, 0.9]), NODO(X(1 / 3), Y(0.5)), NODO(X(2 / 3), Y(0.5))); break;
+    case 'G09': out.push(rombo(0.38, -1, 0.3), rombo(0.62, 1, 0.3), oo([0.55, 0.61, 0.86, 0.92])); break;
+    case 'G10':
+      var ax0 = X(0.22), ax1 = X(0.78), yt = Y(0.07), ra = (ax1 - ax0) / 2;
+      out.push(Pa('M' + f(ax0) + ' ' + f(Y(1)) + ' L' + f(ax0) + ' ' + f(yt + ra) + ' A' + f(ra) + ' ' + f(ra) + ' 0 0 1 ' + f(ax1) + ' ' + f(yt + ra) + ' L' + f(ax1) + ' ' + f(Y(1))),
+        v(0.5, 0.2, 1), PALLINO(X(0.5), Y(0.2)), oo([0.45, 0.58, 0.86, 0.92])); break;
+    case 'G11': out.push(v(1 / 3), v(2 / 3), oo([0.1, 0.22, 0.34, 0.66, 0.78, 0.9]), PUNTA(X(1 / 3), Y(0.5)), PUNTA(X(2 / 3), Y(0.5))); break;
+    case 'G12': out.push(v(1 / 3), v(2 / 3), oo([0.2, 0.8])); [1 / 3, 2 / 3].forEach(function (t) { [0.2, 0.5, 0.8].forEach(function (yy) { out.push(NODO(X(t), Y(yy))); }); }); break;
+    case 'G13':
+      var r13 = a.w * 0.12; out.push(v(1 / 4), v(2 / 4), v(3 / 4), oo([0.07, 0.27, 0.73, 0.93]));
+      [3 / 8, 5 / 8].forEach(function (cx) { out.push(Ci(X(cx), Y(0.17), r13), Ci(X(cx), Y(0.83), r13)); });
+      [1 / 4, 2 / 4, 3 / 4].forEach(function (t) { out.push(NODO(X(t), Y(0.45)), NODO(X(t), Y(0.55))); }); break;
+    case 'G14': out.push(oo([0.1, 0.13, 0.47, 0.5, 0.87, 0.9])); [0.3, 0.5, 0.7].forEach(function (t) { out.push(v(t, 0.1, 0.9), PALLINO(X(t), Y(0.1)), PALLINO(X(t), Y(0.9))); }); break;
+    case 'G15': out.push(v(0.25), v(0.5), v(0.75), oo([0.08, 0.11, 0.47, 0.5, 0.89, 0.92]), o(0.29, 0.14, 0.86), o(0.69, 0.14, 0.86)); break;
+    case 'G16': out.push(v(0.25), v(0.5), v(0.75)); [0.12, 0.48, 0.86].forEach(function (yy) { out.push(o(yy), o(yy + 0.03, 0.12, 0.88)); }); break;
+    case 'G17':
+      out.push(v(1 / 3), v(2 / 3), o(0.35), o(0.65), v(0.5, 0.1, 0.88), QUADRO(X(0.5), Y(0.1)));
+      [0.22, 0.5, 0.78].forEach(function (yy) { out.push(o(yy, 0.12, 0.88), QUADRO(X(0.12), Y(yy)), QUADRO(X(0.88), Y(yy))); }); break;
+  }
+  return '<g stroke="' + FE + '" stroke-linecap="round" stroke-linejoin="round">' + out.join('') + '</g>';
+}
+/* lo spessore della sbarra: come nel catalogo (2,6 su un'anta larga ~79) */
+function spessoreGrata(G, sw) { return clamp(G.w * 0.033, sw * 1.3, Math.max(sw * 1.3, 22)); }
+
 function riempimento(n, G, sw, id, mini) {
   var s = '', r = n.riemp || 'vetro';
   if (r === 'vuoto') return '';
@@ -165,6 +294,12 @@ function riempimento(n, G, sw, id, mini) {
     var n2 = Math.max(1, Math.round(G.w / 120)), passo = G.w / (n2 + 1);
     for (var i = 1; i <= n2; i++) s += riga(G.x + passo * i, G.y, G.x + passo * i, G.y + G.h, sw * 1.6);
     if (G.h > 400) { s += riga(G.x, G.y + G.h * 0.12, G.x + G.w, G.y + G.h * 0.12, sw * 1.4) + riga(G.x, G.y + G.h * 0.88, G.x + G.w, G.y + G.h * 0.88, sw * 1.4); }
+  } else if (r === 'grata') {
+    // il disegno del catalogo è per un'anta alta: sulle parti larghe (cancelli, ringhiere) si ripete a moduli
+    var nm = G.w > G.h * 0.75 ? Math.max(1, Math.round(G.w / (G.h * 0.55))) : 1, mw = G.w / nm;
+    s += ret(G.x, G.y, G.w, G.h, '#ffffff', sw * 0.5) + '<g clip-path="url(#k' + id + ')">';
+    for (var mo = 0; mo < nm; mo++) { var Gm = { x: G.x + mo * mw, y: G.y, w: mw, h: G.h }; s += disegnoGrata(n.grata || 'G01', Gm, spessoreGrata(Gm, sw)); }
+    s += '</g>';
   } else if (r === 'lamelle') {
     s += ret(G.x, G.y, G.w, G.h, '#eef1f4', sw * 0.5);
     for (var yy = G.y + 70; yy < G.y + G.h - 20; yy += 70) s += riga(G.x, yy, G.x + G.w, yy, sw * 0.6);
@@ -229,7 +364,13 @@ function svgFrontale(schema, o) {
     defs += '<clipPath id="k' + id + '"><rect x="' + f(G.x) + '" y="' + f(G.y) + '" width="' + f(Math.max(0, G.w)) + '" height="' + f(Math.max(0, G.h)) + '"/></clipPath>';
     corpo += riempimento(n, Gv, sw, id, o.mini);
     if (z) corpo += riempimento({ riemp: 'pannello' }, { x: G.x, y: G.y + G.h - z, w: G.w, h: z }, sw, id, o.mini);
-    corpo += simbolo(n, G, sw, est);
+    corpo += /^(grata|sbarre|lamelle)$/.test(n.riemp) ? '<g opacity=".5">' + simbolo(n, G, sw, est) + '</g>' : simbolo(n, G, sw, est);
+    var sp = mobile && +n.sportello > 0 ? Math.min(+n.sportello, G.h * 0.7) : 0;
+    if (sp) { // sportello alla napoletana: telaietto in basso + simbolo «a sporgere»
+      var Sx = { x: G.x, y: G.y + G.h - sp, w: G.w, h: sp }, bt = ts * 0.45;
+      corpo += ret(Sx.x, Sx.y, Sx.w, Sx.h, 'none', sw * 1.6) + ret(Sx.x + bt, Sx.y + bt, Sx.w - 2 * bt, Sx.h - 2 * bt, 'none', sw * 0.7);
+      corpo += simbolo({ apertura: 'sporgere', verso: 'esterno' }, { x: Sx.x + bt, y: Sx.y + bt, w: Sx.w - 2 * bt, h: Sx.h - 2 * bt }, sw, est);
+    }
     if (!o.mini) corpo += maniglia(n, R, ts, sw, est);
     if (o.numeri && celle.length > 1) {
       var rr = Math.max(fs * 0.75, 18);
@@ -335,9 +476,10 @@ function svgPianta(schema, o) {
 function descrivi(schema) {
   var celle = calcola(schema), est = schema.vista === 'esterna';
   var parti = celle.map(function (c, k) {
-    var n = c.n, r = n.riemp && n.riemp !== 'vetro' ? ' ' + n.riemp : '';
+    var n = c.n, r = n.riemp === 'grata' ? ' grata ' + nomeGrata(n.grata || 'G01') : n.riemp && n.riemp !== 'vetro' ? ' ' + n.riemp : '';
     return (celle.length > 1 ? (k + 1) + ') ' : '') + Math.round(c.w) + '×' + Math.round(c.h) + ' ' + nomeApertura(n) + r +
-      (n.verso === 'esterno' && n.apertura !== 'fisso' ? ' (apre verso l\'esterno)' : '') + (+n.zoccolo > 0 ? ' zoccolo ' + n.zoccolo : '');
+      (n.verso === 'esterno' && n.apertura !== 'fisso' ? ' (apre verso l\'esterno)' : '') + (+n.zoccolo > 0 ? ' zoccolo ' + n.zoccolo : '') +
+      (+n.sportello > 0 && n.apertura !== 'fisso' ? ' con sportello a sporgere alla napoletana h ' + n.sportello : '');
   });
   return 'Telaio ' + Math.round(schema.L) + '×' + Math.round(schema.H) + ' mm, ' + (est ? 'vista esterna' : 'vista interna') + (celle.length > 1 ? ', ' + celle.length + ' parti: ' : ': ') + parti.join('; ');
 }
@@ -435,6 +577,11 @@ function pannello() {
   }).join('') + '</div><small>SX e DX: lato delle cerniere (o verso dello scorrevole) visto dall\'interno.</small></div>';
   h += '<div class="tec-sez"><span>Riempimento</span><div class="tec-chips">' + RIEMPIMENTI.map(function (r) { return chip('data-riemp', r[0], r[1], (n.riemp || 'vetro') === r[0]); }).join('') + '</div></div>';
   if (n.apertura !== 'fisso') h += '<div class="tec-sez"><span>Apre verso</span><div class="tec-chips">' + chip('data-verso', 'interno', 'Interno', n.verso !== 'esterno') + chip('data-verso', 'esterno', 'Esterno', n.verso === 'esterno') + '</div></div>';
+  if (n.riemp === 'grata') h += '<div class="tec-sez"><span>Disegno della grata · catalogo DF</span><div class="tec-grate">' + GRATE.map(function (g) {
+    var mini = svgFrontale({ L: 420, H: 600, vista: 'interna', root: cella('fisso', 'sx', 'grata', { grata: g[0] }) }, { mini: true });
+    return '<button type="button" class="tec-grata" data-grata="' + g[0] + '" aria-pressed="' + ((n.grata || 'G01') === g[0]) + '" title="' + esc(g[2]) + '">' + mini + '<b>G·' + g[0].slice(1) + '</b><span>' + esc(g[1]) + '</span></button>';
+  }).join('') + '</div><small>Gli stessi 17 disegni del catalogo grate DF: vanno bene per grate, cancelli e ringhiere.</small></div>';
+  if (n.apertura === 'battente') h += '<div class="tec-sez tec-riga"><span>Sportello a sporgere in basso (alla napoletana)</span><input class="tec-in" data-sportello inputmode="numeric" value="' + (+n.sportello || '') + '" placeholder="nessuno"> <span class="tec-mm">mm</span></div>';
   if ((n.riemp || 'vetro') === 'vetro') h += '<div class="tec-sez tec-riga"><span>Zoccolo cieco</span><input class="tec-in" data-zoccolo inputmode="numeric" value="' + (+n.zoccolo || '') + '" placeholder="nessuno"> <span class="tec-mm">mm</span></div>';
   h += '<div class="tec-sez"><span>Dividi questa parte</span><div class="tec-chips">' + chip('data-dividi', 'v2', '2 colonne', false) + chip('data-dividi', 'v3', '3 colonne', false) +
     chip('data-dividi', 'h2', '2 righe', false) + chip('data-dividi', 'sopra', '+ Sopraluce', false) + chip('data-dividi', 'sotto', '+ Sottoluce', false) + '</div></div>';
@@ -448,6 +595,7 @@ function pannello() {
       '<button type="button" class="tec-chip" data-t="unisci">Unisci tutto in una</button></div></div>';
   }
   p.innerHTML = h;
+  var si = p.querySelector('[data-sportello]'); if (si) si.addEventListener('change', function () { memorizza(); n.sportello = Math.max(0, parseInt(si.value, 10) || 0); disegna(); });
   var zi = p.querySelector('[data-zoccolo]'); if (zi) zi.addEventListener('change', function () { memorizza(); n.zoccolo = Math.max(0, parseInt(zi.value, 10) || 0); disegna(); });
   var mi = p.querySelector('[data-misura]'); if (mi) mi.addEventListener('change', function () {
     var v = parseInt(mi.value, 10); memorizza(); pd.padre.parti[pd.indice].size = v > 0 ? v : null; disegna();
@@ -455,7 +603,7 @@ function pannello() {
 }
 function dividi(n, come) {
   var base = clona(n); delete base.id;
-  var copia = function () { return cella(base.apertura, base.cerniere, base.riemp, { verso: base.verso, zoccolo: base.zoccolo }); };
+  var copia = function () { return cella(base.apertura, base.cerniere, base.riemp, { verso: base.verso, zoccolo: base.zoccolo, grata: base.grata, sportello: base.sportello }); };
   var nuovo;
   if (come === 'v2') nuovo = divisa('v', [copia(), copia()]);
   else if (come === 'v3') nuovo = divisa('v', [copia(), copia(), copia()]);
@@ -484,7 +632,7 @@ function clic(e) {
     }
     else if (a === 'accanto' && sel) {
       var pd3 = padreDi(E.cur, sel.n); if (pd3) {
-        memorizza(); var b0 = sel.n, nu = cella(b0.apertura, b0.cerniere === 'sx' ? 'dx' : 'sx', b0.riemp, { verso: b0.verso, zoccolo: b0.zoccolo });
+        memorizza(); var b0 = sel.n, nu = cella(b0.apertura, b0.cerniere === 'sx' ? 'dx' : 'sx', b0.riemp, { verso: b0.verso, zoccolo: b0.zoccolo, grata: b0.grata, sportello: b0.sportello });
         if (b0.tipo === 'split') nu = rinnovaId(clona(b0));
         pd3.padre.parti.splice(pd3.indice + 1, 0, parte(null, nu)); E.sel = nu.id; disegna();
       }
@@ -504,7 +652,8 @@ function clic(e) {
   if (!sel) return;
   var n = sel.n;
   var ap = e.target.closest('[data-apr]'); if (ap) { var A = APERTURE[+ap.dataset.apr]; memorizza(); n.apertura = A[0]; if (A[1]) n.cerniere = A[1]; disegna(); return; }
-  var ri = e.target.closest('[data-riemp]'); if (ri) { memorizza(); n.riemp = ri.dataset.riemp; disegna(); return; }
+  var ri = e.target.closest('[data-riemp]'); if (ri) { memorizza(); n.riemp = ri.dataset.riemp; if (n.riemp === 'grata' && !n.grata) n.grata = 'G01'; disegna(); return; }
+  var gr = e.target.closest('[data-grata]'); if (gr) { memorizza(); n.grata = gr.dataset.grata; var sc = $('#tecPannello').scrollTop; disegna(); $('#tecPannello').scrollTop = sc; return; }
   var ve = e.target.closest('[data-verso]'); if (ve) { memorizza(); n.verso = ve.dataset.verso; disegna(); return; }
   var dv = e.target.closest('[data-dividi]'); if (dv) { memorizza(); dividi(n, dv.dataset.dividi); disegna(); }
 }
@@ -520,6 +669,11 @@ function affianca(lato, mod) {
 function esci() {
   if (!E.storia.length || !E.opz.conferma) { chiudi(false); return; }
   E.opz.conferma().then(function (ok) { if (ok) chiudi(false); });
+}
+/* lo sportello alla napoletana del modello è pensato per la sua altezza standard: si riporta alla misura vera */
+function adattaSportelli(n, k) {
+  if (n.tipo === 'split') { n.parti.forEach(function (p) { adattaSportelli(p.node, k); }); return; }
+  if (+n.sportello > 0 && k > 0 && Math.abs(k - 1) > 0.01) n.sportello = Math.round(n.sportello * k / 10) * 10;
 }
 function apriCatalogo() {
   var c = $('#tecCatalogo');
@@ -543,6 +697,7 @@ function apriCatalogo() {
     if (E.affianca) { affianca(E.affianca, mod); E.affianca = null; c.hidden = true; disegna(); return; }
     if (E.cur && E.cur.root) memorizza();
     E.cur = { v: 1, modello: mod[1], L: L || mod[3], H: H || mod[4], vista: E.cur && E.cur.vista || 'interna', root: mod[5]() };
+    adattaSportelli(E.cur.root, E.cur.H / mod[4]);
     E.sel = null; c.hidden = true; disegna();
   };
 }
@@ -571,6 +726,7 @@ function apri(opz) {
   else {
     var m = MODELLI.filter(function (x) { return x[0] === E.cat; })[0] || MODELLI[0];
     E.cur = { v: 1, modello: m[1], L: +opz.L > 0 ? +opz.L : m[3], H: +opz.H > 0 ? +opz.H : m[4], vista: 'interna', root: m[5]() };
+    adattaSportelli(E.cur.root, E.cur.H / m[4]);
     disegna(); E.affianca = null; apriCatalogo();
   }
 }
@@ -582,6 +738,6 @@ function indietro() {
   esci(); return true;
 }
 
-root.DFTecnico = { apri: apri, aperto: aperto, indietro: indietro, chiudi: chiudi, descrivi: descrivi, immagine: immagine,
+root.DFTecnico = { GRATE: GRATE, apri: apri, aperto: aperto, indietro: indietro, chiudi: chiudi, descrivi: descrivi, immagine: immagine,
   svgFrontale: svgFrontale, svgPianta: svgPianta, MODELLI: MODELLI, CATEGORIE: CATEGORIE, _calcola: calcola };
 })(window);
