@@ -22,6 +22,20 @@ blu DF `#2F6FD0`).
 - **PDF** crea un vero file PDF (anche offline) da condividere su WhatsApp/email o salvare.
 - Tasto «indietro» del telefono: chiude la finestra aperta invece di uscire dall'app.
 
+## Novità della 3.5.0: avviso alla macchina per il preventivo
+
+- **Quando un rilievo di un nuovo cliente (lead) è stato caricato del tutto su Dropbox, l'app avvisa la «macchina»**: una chiamata
+  al webhook di n8n «DF Rilievo — Caricato (app rilievo)» (`URL_AVVISO_RILIEVO` in testa a `dbx.js`) con id del rilievo, versione, cliente,
+  cartella e percorsi veri di `dati_*.json` e del PDF. n8n lascia una nota per il VPS, che prepara il preventivo.
+- **Solo i lead.** Un rilievo caricato in una commessa non avvisa nessuno.
+- **Non blocca mai il caricamento.** Se l'avviso non parte (linea debole, n8n che non risponde) il rilievo resta «Su Dropbox ✓» e l'avviso viene
+  **ritentato al giro dopo** (all'apertura, al ritorno della linea, ogni minuto): al massimo 3 tentativi per versione. Mai due avvisi riusciti per la
+  stessa versione dello stesso rilievo; se il rilievo viene modificato e rimandato, l'avviso riparte una volta per la versione nuova.
+- **Cosa si vede**: dopo l'invio, «Salvato su Dropbox ✓ … · Preventivo: la macchina ci lavora» (e la stessa riga nell'archivio). Lo stato
+  dell'avviso sta nella voce `invii` (`avvisoMacchina: 'ok'|'errore: …'`, `avvisoMacchinaIl`, `avvisoVersione`, `avvisoTentativi`).
+- **I rilievi già su Dropbox prima della 3.5.0 non vengono mai avvisati** (il segno `avvisoDovuto` nasce solo con il caricamento nuovo).
+- Prova senza browser: `node prove/banco-avviso.js` (dbx.js vero, memoria e Dropbox finti, fetch che registra le chiamate; nomi inventati).
+
 ## Novità della 3.4.1: i referenti della rubrica aziendale
 
 - **Più righe con lo stesso nome = una ditta sola.** Nella rubrica aziendale una ditta può avere la riga principale

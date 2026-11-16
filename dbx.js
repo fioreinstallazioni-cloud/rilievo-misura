@@ -15,6 +15,13 @@
 (function (root) {
   'use strict';
 
+  /* Avviso alla «macchina»: quando un rilievo di un LEAD è stato caricato del tutto su Dropbox, l'app chiama questo webhook di n8n
+     (workflow «DF Rilievo — Caricato (app rilievo)»), che lascia una nota al VPS: da lì la macchina prepara il preventivo.
+     L'indirizzo è PUBBLICO apposta (sta nel codice di una pagina pubblica, come quello del modulo del sito): la sicurezza non sta
+     nell'indirizzo ma nei controlli di n8n (solo percorsi dentro la cartella dei lead, freno per indirizzo) e del VPS. */
+  var URL_AVVISO_RILIEVO = 'https://n8n.srv1773053.hstgr.cloud/webhook/df-rilievo-caricato-fc2c83';
+  var AVVISO_TENTATIVI = 3;   // in tutto, per ogni versione di un rilievo
+
   var DB_NAME = 'df-rilievo';
   var DB_VER = 1;
   var STORES = ['rilievi', 'kv', 'outbox', 'invii'];
@@ -210,6 +217,57 @@
     });
   }
 
+  /* ── avviso alla macchina (solo lead) ───────────────────────────────── */
+  function versioneApp() { return String(root.VERSIONE_APP || String(root.VERSIONE || '').replace(/^rilievo-v/, '') || ''); }
+  /* la destinazione è un lead? (le voci di prima della 3.5 non hanno destType: si guarda la cartella) */
+  function eLead(it) {
+    if (it.destType) return it.destType === 'lead';
+    return /\/Lead\/[^\/]+\/?$/.test(String(it.cartella || ''));
+  }
+  /* Manda l'avviso per un rilievo già caricato. Non lancia MAI errori e non tocca lo stato dell'invio: scrive solo i campi avviso* nella voce
+     «invii». Mai due avvisi riusciti per la stessa versione dello stesso rilievo; al massimo AVVISO_TENTATIVI tentativi per versione. */
+  function avvisaMacchina(id) {
+    return store.get('invii', id).then(function (inv) {
+      if (!inv || inv.stato !== 'inviato' || !inv.avvisoDovuto) return null;
+      var ver = inv.versione, stessa = inv.avvisoVersione === ver;
+      if (stessa && inv.avvisoMacchina === 'ok') return null;
+      var tent = stessa ? (inv.avvisoTentativi || 0) : 0;
+      if (tent >= AVVISO_TENTATIVI) return null;
+      var perc = inv.percorsi || {};
+      var corpo = { rilievoId: id, versione: ver, cliente: inv.cliente || '', destType: 'lead', cartella: inv.cartella || '',
+                    dati: perc.json || '', pdf: perc.pdf || '', app: versioneApp() };
+      var esito = function (ok, testo) {
+        return aggiornaInvio(id, { avvisoMacchina: ok ? 'ok' : 'errore: ' + testo, avvisoMacchinaIl: Date.now(), avvisoVersione: ver, avvisoTentativi: tent + 1 });
+      };
+      return fetchT(URL_AVVISO_RILIEVO, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(corpo) }, 15000).then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (d) {
+          if (r.ok && d && d.ok === true) return esito(true);
+          return esito(false, 'risposta ' + r.status + (d && d.motivo ? ' (' + String(d.motivo).slice(0, 80) + ')' : ''));
+        });
+      }, function (e) { return esito(false, (e && e.message) || 'rete'); });
+    }).catch(function () { return null; });
+  }
+  /* quanti rilievi hanno un avviso ancora da riprovare */
+  function avvisiDaRiprovare() {
+    return store.getAll('invii').then(function (tutti) {
+      return tutti.filter(function (inv) {
+        if (inv.stato !== 'inviato' || !inv.avvisoDovuto) return false;
+        var stessa = inv.avvisoVersione === inv.versione;
+        return !(stessa && inv.avvisoMacchina === 'ok') && (stessa ? (inv.avvisoTentativi || 0) : 0) < AVVISO_TENTATIVI;
+      });
+    }).catch(function () { return []; });
+  }
+  /* al giro dopo: gli avvisi non riusciti si riprovano (non a telefono senza linea: sarebbe un tentativo buttato) */
+  function ripassaAvvisi(appena) {
+    if (root.navigator && root.navigator.onLine === false) return Promise.resolve();
+    return avvisiDaRiprovare().then(function (l) {
+      l = l.filter(function (inv) { return !(appena && appena[inv.id]); });
+      var i = 0;
+      function prossimo() { if (i >= l.length) return null; return avvisaMacchina(l[i++].id).then(prossimo); }
+      return prossimo();
+    }).catch(function () {});
+  }
+
   /* ── la coda degli invii ─────────────────────────────────────────────── */
   function aggiornaInvio(id, patch) {
     return store.get('invii', id).then(function (cur) {
@@ -244,6 +302,14 @@
      restituisce un riassunto { inviati, rimasti, errore }. */
   function svuotaCoda(origine) {
     return conBlocco(function () {
+      var appena = {};   // i rilievi avvisati in questo giro: il ripasso li lascia al giro dopo
+      return svuotaOutbox(origine, appena).then(function (esito) { return ripassaAvvisi(appena).then(function () { return esito; }); });
+    }).then(function (r) { annuncia({ tipo: 'coda-finita', esito: r }); return r; }, function (e) {
+      return { inviati: 0, rimasti: -1, errore: e && e.message, codice: 'interno' };
+    });
+  }
+  function svuotaOutbox(origine, appena) {
+    return Promise.resolve().then(function () {
       return store.getAll('outbox').then(function (items) {
         items.sort(function (a, b) { return (a.createdAt || 0) - (b.createdAt || 0); });
         var esito = { inviati: 0, rimasti: items.length, errore: null, codice: null, origine: origine || '' };
@@ -271,9 +337,14 @@
               var percorsi = {};
               it.files.forEach(function (f) { percorsi[f.chiave || f.nome] = f.risultato || f.path; });
               return togliVoce(it).then(function (esitoTogli) {
-                var patch = { inviatoIl: Date.now(), cartella: it.cartella, percorsi: percorsi, versione: it.versione, errore: null, tentativi: 0 };
+                var patch = { inviatoIl: Date.now(), cartella: it.cartella, percorsi: percorsi, versione: it.versione, errore: null, tentativi: 0,
+                              cliente: it.cliente || '', destType: eLead(it) ? 'lead' : 'commessa', avvisoDovuto: eLead(it) };
                 patch.stato = esitoTogli === 'sostituita' ? 'in_coda' : 'inviato';
                 return aggiornaInvio(it.id, patch);
+              }).then(function () {
+                // rilievo caricato del tutto: si avvisa la macchina (solo lead; non blocca e non fa fallire niente)
+                if (appena) appena[it.id] = true;
+                return avvisaMacchina(it.id);
               }).then(function () {
                 esito.inviati++; esito.rimasti--;
                 annuncia({ tipo: 'inviato', id: it.id, cliente: it.cliente });
@@ -302,15 +373,13 @@
           })).then(function () { annuncia({ tipo: 'errore', codice: e.code, messaggio: e.message }); return esito; });
         });
       });
-    }).then(function (r) { annuncia({ tipo: 'coda-finita', esito: r }); return r; }, function (e) {
-      return { inviati: 0, rimasti: -1, errore: e && e.message, codice: 'interno' };
     });
   }
 
   root.DFStore = { openDB: openDB, store: store, kvGet: kvGet, kvSet: kvSet, STORES: STORES };
   root.DFDropbox = {
     cfg: cfg, setCfg: setCfg, collegato: collegato, token: token, scambiaCodice: scambiaCodice,
-    elencoCartelle: elencoCartelle, metadati: metadati, scarica: scarica, svuotaCoda: svuotaCoda, aggiornaInvio: aggiornaInvio, annuncia: annuncia,
+    elencoCartelle: elencoCartelle, metadati: metadati, scarica: scarica, svuotaCoda: svuotaCoda, aggiornaInvio: aggiornaInvio, annuncia: annuncia, avvisiDaRiprovare: avvisiDaRiprovare,
     canale: function () { return canale; }
   };
 })(typeof self !== 'undefined' ? self : this);

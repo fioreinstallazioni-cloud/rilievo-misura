@@ -9,7 +9,7 @@
 (function () {
 'use strict';
 
-var VERSIONE_APP = '3.4.1';
+var VERSIONE_APP = '3.5.0';
 var BASE_PREDEFINITA = '/Ufficio/COMMESSE/Commesse Installazioni 2026';
 var COMMESSE_PREDEFINITE = [
   'C47-SIRYUS SRL', 'C46-Mes group', 'C45-Tonino Russo', 'C44-Teatro Bracco', 'C35-Tecno3-Telai',
@@ -740,6 +740,8 @@ function aggiornaRiepilogoStato() {
     el.innerHTML = '<b>' + esc(s.testo) + '</b>' + (s.dett ? esc(s.dett) : '');
   }, function () {});
 }
+/* l'avviso alla macchina è partito per la versione caricata? */
+function macchinaAvvisata(inv) { return !!(inv && inv.stato === 'inviato' && inv.avvisoMacchina === 'ok' && inv.avvisoVersione === inv.versione); }
 function statoInvio(r, inv) {
   if (!inv || !inv.stato) return { cls: 'tag-bozza', testo: 'Bozza sul telefono', dett: 'Salvata in automatico', breve: 'Bozza' };
   if (inv.stato === 'in_coda') return { cls: 'tag-coda', testo: 'In attesa di linea', dett: 'Parte da solo appena c\'è internet', breve: 'In attesa di linea' };
@@ -747,7 +749,7 @@ function statoInvio(r, inv) {
   if (inv.stato === 'errore') return { cls: 'tag-errore', testo: 'Invio non riuscito', dett: inv.errore || '', breve: 'Errore' };
   if (inv.stato === 'inviato') {
     if (r && inv.versione && r.updatedAt > inv.versione + 1500) return { cls: 'tag-mod', testo: 'Modificato dopo l\'invio', dett: 'Rimandalo per aggiornare Dropbox', breve: 'Da rimandare' };
-    return { cls: 'tag-ok', testo: 'Su Dropbox ✓', dett: quando(inv.inviatoIl), breve: 'Su Dropbox' };
+    return { cls: 'tag-ok', testo: 'Su Dropbox ✓', dett: quando(inv.inviatoIl) + (macchinaAvvisata(inv) ? ' · Preventivo: la macchina ci lavora' : ''), breve: 'Su Dropbox' };
   }
   return { cls: 'tag-bozza', testo: 'Bozza', dett: '', breve: 'Bozza' };
 }
@@ -1985,7 +1987,7 @@ function mettiInCoda() {
           });
         });
       }
-      var voce = { id: rec.id, cliente: S.cliente, cartella: base, createdAt: Date.now(), versione: rec.updatedAt, files: files, tentativi: 0 };
+      var voce = { id: rec.id, cliente: S.cliente, destType: (S.destType === 'commessa' && S.destCommessa) ? 'commessa' : 'lead', cartella: base, createdAt: Date.now(), versione: rec.updatedAt, files: files, tentativi: 0 };
       return db().put('outbox', voce).then(function () {
         return DFDropbox.aggiornaInvio(rec.id, { stato: 'in_coda', richiestoIl: Date.now(), cartella: base, errore: null });
       });
@@ -2011,7 +2013,12 @@ $('#btnDropbox').onclick = function () {
           return DFDropbox.svuotaCoda('pagina').then(function (r) {
             lib2(); aggiornaBadge(); aggiornaRiepilogoStato();
             if (r.occupato) { avviso('Invio già in corso…', ''); return; }
-            if (!r.errore) { avviso('Salvato su Dropbox ✓ ' + cartellaDestinazione().split('/').slice(-1)[0], 'ok', 3500); return; }
+            if (!r.errore) {
+              // se la macchina è stata avvisata (solo lead) lo si dice, in una riga
+              return db().get('invii', rec.id).then(function (iv) { return iv; }, function () { return null; }).then(function (iv) {
+                avviso('Salvato su Dropbox ✓ ' + cartellaDestinazione().split('/').slice(-1)[0] + (macchinaAvvisata(iv) ? ' · Preventivo: la macchina ci lavora' : ''), 'ok', macchinaAvvisata(iv) ? 5000 : 3500);
+              });
+            }
             if (r.codice === 'rete') avviso('Linea debole: resta in coda e riprovo da solo', 'offline', 4500);
             else if (r.codice === 'ricollega' || r.codice === 'noncoll') dialogo({ titolo: 'Ricollega Dropbox', testo: esc(r.errore) + '. Il rilievo resta in coda sul telefono.', azioni: [{ v: false, t: 'Più tardi' }, { v: true, t: 'Apri impostazioni', cls: 'btn-primary' }] }).then(function (v) { if (v) apriImpostazioni(); });
             else dialogo({ titolo: 'Invio non riuscito', testo: esc(r.errore) + '<br>Il rilievo resta in coda: puoi riprovare dall\'archivio.' });
@@ -2033,8 +2040,9 @@ function aggiornaBadge() {
 }
 function provaInvio(origine) {
   if (!online()) return Promise.resolve();
-  return db().count('outbox').then(function (n) {
-    if (!n) return;
+  return Promise.all([db().count('outbox'), DFDropbox.avvisiDaRiprovare()]).then(function (r) {
+    if (!r[0] && !r[1].length) return;
+    if (!r[0]) return DFDropbox.svuotaCoda(origine);   // niente da caricare: solo gli avvisi alla macchina da riprovare
     return DFDropbox.collegato().then(function (c) { if (c) return DFDropbox.svuotaCoda(origine); });
   }).then(function () { aggiornaBadge(); aggiornaRiepilogoStato(); }, function () {});
 }
