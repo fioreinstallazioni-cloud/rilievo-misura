@@ -7,7 +7,7 @@
    Per pubblicare una versione nuova basta cambiare VERSIONE: il telefono
    la scarica alla prima apertura con linea e la usa dall'apertura dopo.
    ═══════════════════════════════════════════════════════════════════ */
-var VERSIONE = 'rilievo-v3.4.0';
+var VERSIONE = 'rilievo-v3.4.1';
 var CACHE_APP = VERSIONE;
 var CACHE_MAPPE = 'rilievo-mappe';
 var MAX_MAPPE = 600;
@@ -15,10 +15,10 @@ var MAX_MAPPE = 600;
 var FILE_APP = [
   './',
   'index.html',
-  'app.css?v=3.4.0',
-  'app.js?v=3.4.0',
-  'dbx.js?v=3.4.0',
-  'tecnico.js?v=3.4.0',
+  'app.css?v=3.4.1',
+  'app.js?v=3.4.1',
+  'dbx.js?v=3.4.1',
+  'tecnico.js?v=3.4.1',
   'manifest.webmanifest',
   'assets/logo-df-bianco.png',
   'icons/icon-192.png',
@@ -41,7 +41,7 @@ var FILE_APP = [
   'vendor/leaflet/images/layers-2x.png'
 ];
 
-importScripts('dbx.js?v=3.4.0');
+importScripts('dbx.js?v=3.4.1');
 
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(CACHE_APP).then(function (c) {

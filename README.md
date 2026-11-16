@@ -22,6 +22,23 @@ blu DF `#2F6FD0`).
 - **PDF** crea un vero file PDF (anche offline) da condividere su WhatsApp/email o salvare.
 - Tasto «indietro» del telefono: chiude la finestra aperta invece di uscire dall'app.
 
+## Novità della 3.4.1: i referenti della rubrica aziendale
+
+- **Più righe con lo stesso nome = una ditta sola.** Nella rubrica aziendale una ditta può avere la riga principale
+  (col codice, la P.IVA, l'indirizzo) e una riga per ogni referente con il suo cellulare. Prima l'app teneva solo la
+  prima riga e i referenti sparivano: scegliendo «Top Solutions s.r.l.» il telefono restava vuoto.
+- **Nei suggerimenti sotto «Cliente / cantiere» e nella finestra Rubrica** la ditta compare una volta, e sotto di lei una
+  voce per ogni referente con telefono, tipo «Top Solutions s.r.l. — Marco · 339 289 6852». Toccando la voce del referente
+  si compilano cliente, telefono del referente, referente (solo per i clienti «azienda»: nel «rivenditore» quel campo è il
+  cliente finale e non si tocca), email del referente (o della ditta), indirizzo, P.IVA e codice della riga principale.
+- **Toccando la ditta senza referente**: se la riga principale ha un telefono si usa quello; se non ce l'ha e il referente
+  col telefono è uno solo si usa il suo («Telefono di Marco»); se sono più d'uno il telefono resta vuoto, l'avviso dice
+  «Scegli il referente: Marco, Paola» e il cursore va sul campo Telefono. Fra due numeri non si indovina.
+- **La ricerca per cifre** trova anche i telefoni dei referenti e propone la voce giusta.
+- Sotto la ditta compare «Referenti: Marco, Paola». Per i contatti senza righe doppie e per la rubrica del telefono
+  non cambia niente.
+- Prova senza browser: `node prove/banco-rubrica.js` (rubrica finta, nomi e numeri inventati).
+
 ## Novità della 3.4: grate del catalogo DF e persiane napoletane
 
 - **I 17 disegni del «Catalogo grate DF»** (G·01 Posillipo … G·17 Miseno, quello mandato ad Abete il

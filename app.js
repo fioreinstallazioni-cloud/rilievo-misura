@@ -9,7 +9,7 @@
 (function () {
 'use strict';
 
-var VERSIONE_APP = '3.4.0';
+var VERSIONE_APP = '3.4.1';
 var BASE_PREDEFINITA = '/Ufficio/COMMESSE/Commesse Installazioni 2026';
 var COMMESSE_PREDEFINITE = [
   'C47-SIRYUS SRL', 'C46-Mes group', 'C45-Tonino Russo', 'C44-Teatro Bracco', 'C35-Tecno3-Telai',
@@ -988,29 +988,94 @@ function aggiornaRubricaAziendale(forza) {
 function chiaveTesto(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
 function stessoNome(a, b) { return chiaveTesto(a).trim() === chiaveTesto(b).trim(); }
 function locale(nome) { return rubrica.filter(function (x) { return stessoNome(x.nome, nome); })[0]; }
+/* Più righe con lo stesso NOME = una ditta sola: la riga principale (quella col CODICE, o la prima)
+   porta con sé i referenti, cioè i nomi e i telefoni delle altre righe. Si raggruppa qui, al momento
+   dell'uso, così funziona anche con la copia della rubrica già scaricata sul telefono. */
+var gruppiRubrica = null;
+function cifreTel(t) { return String(t == null ? '' : t).replace(/\D/g, ''); }
+function formattaTel(t) {
+  var s = String(t == null ? '' : t).trim();
+  if (/^[\d ]+$/.test(s) && /^3\d{9}$/.test(s.replace(/ /g, ''))) { var d = s.replace(/ /g, ''); return d.slice(0, 3) + ' ' + d.slice(3, 6) + ' ' + d.slice(6); }
+  return s;
+}
+function contattiAziendali() {
+  var src = rubAz.contatti;
+  if (gruppiRubrica && gruppiRubrica.src === src && gruppiRubrica.n === src.length) return gruppiRubrica.lista;
+  var ordine = [], per = {};
+  src.forEach(function (c) {
+    var k = chiaveTesto(c.nome).replace(/\s+/g, ' ').trim();
+    if (!per[k]) { per[k] = []; ordine.push(k); }
+    per[k].push(c);
+  });
+  var lista = ordine.map(function (k) {
+    var righe = per[k];
+    var princ = righe.filter(function (r) { return r.codice; })[0] || righe[0];
+    var refs = [], visti = {};
+    righe.forEach(function (r) {
+      var inPrinc = r === princ;
+      if (inPrinc ? !(r.referente && r.tel) : !(r.referente || r.tel)) return;   // la principale conta solo se ha un referente col telefono
+      var chiave = chiaveTesto(r.referente) + '|' + cifreTel(r.tel);
+      if (visti[chiave]) return; visti[chiave] = 1;
+      refs.push({ nome: r.referente || '', tel: r.tel || '', tel2: r.tel2 || '', email: r.email || '', inPrincipale: inPrinc });
+    });
+    var g = {}; for (var p in princ) g[p] = princ[p];
+    g.referenti = refs;
+    return g;
+  });
+  gruppiRubrica = { src: src, n: src.length, lista: lista };
+  return lista;
+}
+/* la voce di un referente: la ditta con il telefono (e l'email) di quella persona */
+function voceReferente(c, r) {
+  var v = {}; for (var p in c) v[p] = c[p];
+  delete v.referenti;
+  v.tel = r.tel; v.tel2 = r.tel2 || ''; v.email = r.email || c.email; v.referente = r.nome; v.rif = r;
+  return v;
+}
+function etichettaContatto(c) {
+  if (!c.rif) return c.nome;
+  return c.nome + ' — ' + (c.rif.nome || 'altro numero') + (c.rif.tel ? ' · ' + formattaTel(c.rif.tel) : '');
+}
 function cercaContatti(q, max) {
   var t = chiaveTesto(q).trim(); if (!t) return [];
   var parole = t.split(/\s+/), cifre = t.replace(/\D/g, '');
-  var visti = {}, out = [];
-  // prima quelli aziendali; quelli del telefono solo se non sono già in rubrica aziendale
-  rubAz.contatti.concat(rubrica.filter(function (c) { return !c.inAziendale; })).forEach(function (c) {
-    var n = chiaveTesto(c.nome), tutto = n + ' ' + chiaveTesto(c.referente) + ' ' + chiaveTesto(c.via) + ' ' + chiaveTesto(c.piva);
+  var visti = {}, cand = [];
+  // prima quelli aziendali (una ditta sola con i suoi referenti); quelli del telefono solo se non sono già in rubrica aziendale
+  contattiAziendali().concat(rubrica.filter(function (c) { return !c.inAziendale; })).forEach(function (c) {
+    var n = chiaveTesto(c.nome), refs = c.referenti || [];
+    var nomiRef = refs.map(function (r) { return chiaveTesto(r.nome); }).join(' ');
+    var tutto = n + ' ' + chiaveTesto(c.referente) + ' ' + nomiRef + ' ' + chiaveTesto(c.via) + ' ' + chiaveTesto(c.piva);
     var punti = n.indexOf(t) === 0 ? 0 : n.split(/\s+/).some(function (w) { return w.indexOf(parole[0]) === 0; }) && parole.every(function (w) { return tutto.indexOf(w) >= 0; }) ? 1 :
       parole.every(function (w) { return tutto.indexOf(w) >= 0; }) ? 2 : -1;
-    if (punti < 0 && cifre.length >= 4 && (String(c.tel).replace(/\D/g, '') + ' ' + String(c.tel2 || '').replace(/\D/g, '')).indexOf(cifre) >= 0) punti = 2;
+    var soloVoci = null;
+    if (punti < 0 && cifre.length >= 4) {
+      if ((cifreTel(c.tel) + ' ' + cifreTel(c.tel2)).indexOf(cifre) >= 0) punti = 2;
+      else {
+        var hit = refs.filter(function (r) { return r.tel && (cifreTel(r.tel) + ' ' + cifreTel(r.tel2)).indexOf(cifre) >= 0; });
+        if (hit.length) { punti = 2; soloVoci = hit; }   // trovato dal telefono di un referente: si propone lui, non la ditta
+      }
+    }
     if (punti < 0) return;
     var chiave = n + '|' + (c.aziendale ? 'a' : 't'); if (visti[chiave]) return; visti[chiave] = 1;
-    out.push({ c: c, p: punti });
+    cand.push({ c: c, p: punti, soloVoci: soloVoci });
   });
-  out.sort(function (a, b) { return a.p - b.p || a.c.nome.localeCompare(b.c.nome, 'it'); });
-  return out.slice(0, max || 50).map(function (x) { return x.c; });
+  cand.sort(function (a, b) { return a.p - b.p || a.c.nome.localeCompare(b.c.nome, 'it'); });
+  var out = [];
+  cand.slice(0, max || 50).forEach(function (x) {
+    if (x.soloVoci) { x.soloVoci.forEach(function (r) { out.push(voceReferente(x.c, r)); }); return; }
+    out.push(x.c);
+    (x.c.referenti || []).forEach(function (r) { if (r.tel && !r.inPrincipale) out.push(voceReferente(x.c, r)); });
+  });
+  return out;
 }
 function dettaglioContatto(c) {
   var p = [];
   if (c.tipo) p.push(c.tipo.charAt(0) + c.tipo.slice(1).toLowerCase());
   else if (c.tipoCliente === 'azienda') p.push('Azienda'); else if (c.tipoCliente === 'rivenditore') p.push('Rivenditore');
-  if (c.tel) p.push(c.tel); if (c.via) p.push(c.via);
-  if (c.referente) p.push((c.tipoCliente === 'rivenditore' ? 'Cliente finale: ' : 'Ref: ') + c.referente);
+  if (c.tel && !c.rif) p.push(c.tel); if (c.via) p.push(c.via);
+  var nomiRef = (c.referenti || []).map(function (r) { return r.nome; }).filter(Boolean);
+  if (c.referente && !c.rif && nomiRef.indexOf(c.referente) < 0) p.push((c.tipoCliente === 'rivenditore' ? 'Cliente finale: ' : 'Ref: ') + c.referente);
+  if (nomiRef.length) p.push('Referenti: ' + nomiRef.join(', '));
   return p.join(' · ');
 }
 function suggerisciRubrica(input) {
@@ -1019,14 +1084,23 @@ function suggerisciRubrica(input) {
   var trovati = cercaContatti(q, 8);
   if (!trovati.length) { if (comboAperta && comboAperta.input === input) chiudiCombo(); return; }
   apriCombo(input, '', trovati.map(function (c) {
-    return { v: c.nome, etichetta: c.nome + (c.aziendale ? '' : '  · sul telefono'), dett: dettaglioContatto(c), scegli: function () { compilaDaContatto(c); } };
+    return { v: c.nome, etichetta: c.rif ? etichettaContatto(c) : c.nome + (c.aziendale ? '' : '  · sul telefono'), dett: dettaglioContatto(c), scegli: function () { compilaDaContatto(c); } };
   }));
 }
 function compilaDaContatto(c) {
   var tel = c.aziendale ? locale(c.nome) : c;   // dettagli in più tenuti sul telefono
   tel = tel || {};
-  S.cliente = c.nome; S.tel = c.tel || tel.tel || ''; S.email = c.email || tel.email || ''; S.via = c.via || tel.via || '';
-  S.referente = c.referente || tel.referente || ''; S.tipoCliente = tel.tipoCliente === 'rivenditore' ? 'rivenditore' : (c.tipoCliente || 'privato');
+  var rif = c.rif || null;
+  var refsTel = rif ? [] : (c.referenti || []).filter(function (r) { return r.tel; });
+  // il telefono: quello della voce scelta o della ditta; se la ditta non ne ha e c'è un solo referente si usa il suo; con più referenti non si indovina
+  var telScelto = rif ? rif.tel : (c.tel || tel.tel || ''), daRef = null, daScegliere = false;
+  if (!telScelto && refsTel.length === 1) { telScelto = refsTel[0].tel; daRef = refsTel[0]; }
+  else if (!telScelto && refsTel.length > 1) daScegliere = true;
+  var tipo = tel.tipoCliente === 'rivenditore' ? 'rivenditore' : (c.tipoCliente || 'privato');
+  S.cliente = c.nome; S.tel = telScelto; S.email = c.email || tel.email || ''; S.via = c.via || tel.via || '';
+  // nel rivenditore «referente» vuol dire «cliente finale»: lì il nome del referente della ditta non si mette
+  S.referente = rif ? (tipo === 'azienda' ? rif.nome : (tel.referente || '')) : (c.referente || tel.referente || '');
+  S.tipoCliente = tipo;
   S.citofono = tel.citofono || tel.vianote || ''; S.wa = !!tel.wa; S.tg = !!tel.tg;
   S.cantiereDiverso = !!tel.cantiereDiverso; S.viaCantiere = tel.viaCantiere || '';
   // le coordinate del telefono valgono solo se l'indirizzo è lo stesso
@@ -1038,7 +1112,13 @@ function compilaDaContatto(c) {
   ['piano', 'mezzoSalita'].forEach(function (k) { if (tel[k]) S[k] = tel[k]; });
   S.rubricaRif = c.aziendale ? { nome: c.nome, codice: c.codice || '', piva: c.piva || '', cf: c.cf || '' } : null;
   disegnaTestata(); salvaPresto();
-  avviso('Dati di ' + c.nome + ' presi dalla ' + (c.aziendale ? 'rubrica aziendale' : 'rubrica del telefono'), 'ok');
+  if (daScegliere) {
+    avviso('Scegli il referente: ' + refsTel.map(function (r) { return r.nome || formattaTel(r.tel); }).join(', '), 'errore', 6000);
+    var campoTel = $('#c_tel'); if (campoTel) setTimeout(function () { campoTel.focus(); }, 420);   // dopo la chiusura della finestra Rubrica
+    return;
+  }
+  avviso('Dati di ' + c.nome + (rif && rif.nome ? ' (' + rif.nome + ')' : '') + ' presi dalla ' + (c.aziendale ? 'rubrica aziendale' : 'rubrica del telefono') +
+    (daRef ? ' · Telefono di ' + (daRef.nome || formattaTel(daRef.tel)) : ''), 'ok', daRef ? 4500 : 0);
 }
 /* sul telefono si tengono i dettagli che la rubrica aziendale non ha; i clienti nuovi restano qui finché non li registri */
 function salvaInRubrica() {
@@ -1067,7 +1147,7 @@ function apriRubrica() {
     '<button class="btn btn-primary btn-lg btn-block" type="button" id="rubAggiungi">' + ic('piu', 'ico-s') + 'Salva il cliente di questo rilievo sul telefono</button>');
   var el = voce.el, mostrati = [];
   function riga(c, k) {
-    return '<div class="riga-c"><div class="info" data-scegli="' + k + '" role="button" tabindex="0"><h3>' + esc(c.nome) + '</h3><p>' + esc(dettaglioContatto(c)) + '</p>' +
+    return '<div class="riga-c"><div class="info" data-scegli="' + k + '" role="button" tabindex="0"><h3>' + esc(etichettaContatto(c)) + '</h3><p>' + esc(dettaglioContatto(c)) + '</p>' +
       (c.aziendale ? '' : '<p><span class="tag tag-coda">Sul telefono · da registrare in rubrica aziendale</span></p>') + '</div>' +
       '<button class="btn btn-secondary btn-piccolo" type="button" data-scegli="' + k + '">Scegli</button>' +
       (c.aziendale ? '' : '<button class="btn btn-icona btn-pericolo" type="button" data-togli="' + k + '" aria-label="Togli ' + esc(c.nome) + ' dal telefono">' + ic('cestino', 'ico-s') + '</button>') + '</div>';
